@@ -597,7 +597,7 @@ export async function getAdminMediaData() {
 
         // Determine file type
         const ext = file.name.split(".").pop()?.toLowerCase() || "";
-        let type = "document";
+        let type: "image" | "video" | "audio" | "document" = "document";
         if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext)) {
           type = "image";
         } else if (["mp4", "webm", "mov", "avi"].includes(ext)) {
@@ -615,6 +615,8 @@ export async function getAdminMediaData() {
           bucket: "media",
           path: file.name,
           createdAt: file.created_at || new Date().toISOString(),
+          updatedAt:
+            file.updated_at || file.created_at || new Date().toISOString(),
         };
       });
 
