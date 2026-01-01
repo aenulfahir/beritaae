@@ -1,28 +1,60 @@
-import { newsArticles, categories, featuredNews, latestNews } from "@/data/mock";
-import { ScrollReveal, StaggerContainer, StaggerItem } from "@/components/animations/ScrollReveal";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  ScrollReveal,
+  StaggerContainer,
+  StaggerItem,
+} from "@/components/animations/ScrollReveal";
 import { NewsCard } from "@/components/news/NewsCard";
 import Link from "next/link";
 import Image from "next/image";
-import { TrendingUp, Flame, Eye, Clock, ChevronRight, ArrowRight, Zap, Sparkles } from "lucide-react";
+import {
+  TrendingUp,
+  Zap,
+  Eye,
+  ChevronRight,
+  ArrowRight,
+  Sparkles,
+} from "lucide-react";
+import { Flame } from "lucide-react";
+import {
+  getPublishedArticles,
+  getFeaturedArticles,
+  getTrendingArticles,
+  getArticlesByCategory,
+  getBreakingNews,
+} from "@/lib/supabase/services/articles-server";
+import { getCategories } from "@/lib/supabase/services/categories-server";
+import { getTrendingTagsServer } from "@/lib/supabase/services/tags-server";
+import { NewsArticle } from "@/types";
 
 // Category Section Component
+const PLACEHOLDER_IMAGE =
+  "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800";
+
 interface CategorySectionProps {
   categorySlug: string;
   title: string;
   emoji: string;
   gradient: string;
   textColor?: string;
+  articles: NewsArticle[];
 }
 
-function CategorySection({ categorySlug, title, emoji, gradient, textColor = "text-white" }: CategorySectionProps) {
-  const categoryArticles = newsArticles.filter((a) => a.category.slug === categorySlug).slice(0, 3);
+function CategorySection({
+  categorySlug,
+  title,
+  emoji,
+  gradient,
+  textColor = "text-white",
+  articles,
+}: CategorySectionProps) {
+  const categoryArticles = articles.slice(0, 3);
 
   if (categoryArticles.length === 0) return null;
 
   return (
-    <div className={`${gradient} rounded-2xl p-4 ${textColor} overflow-hidden relative`}>
+    <div
+      className={`${gradient} rounded-2xl p-4 ${textColor} overflow-hidden relative`}
+    >
       <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
       <div className="relative">
         <div className="flex items-center justify-between mb-3">
@@ -30,7 +62,10 @@ function CategorySection({ categorySlug, title, emoji, gradient, textColor = "te
             <span className="text-base">{emoji}</span>
             {title}
           </h3>
-          <Link href={`/category/${categorySlug}`} className="text-xs opacity-70 hover:opacity-100 transition-opacity flex items-center gap-0.5">
+          <Link
+            href={`/category/${categorySlug}`}
+            className="text-xs opacity-70 hover:opacity-100 transition-opacity flex items-center gap-0.5"
+          >
             Semua <ChevronRight className="h-3 w-3" />
           </Link>
         </div>
@@ -39,19 +74,32 @@ function CategorySection({ categorySlug, title, emoji, gradient, textColor = "te
             <Link
               key={article.id}
               href={`/news/${article.slug}`}
-              className={`flex gap-2.5 p-2 ${i === 0 ? 'bg-white/15' : 'bg-white/5'} backdrop-blur-sm rounded-xl hover:bg-white/20 transition-colors group`}
+              className={`flex gap-2.5 p-2 ${
+                i === 0 ? "bg-white/15" : "bg-white/5"
+              } backdrop-blur-sm rounded-xl hover:bg-white/20 transition-colors group`}
             >
               {i === 0 && (
                 <div className="relative h-14 w-14 shrink-0 rounded-lg overflow-hidden">
-                  <Image src={article.image_url} alt={article.title} fill className="object-cover" />
+                  <Image
+                    src={article.image_url || PLACEHOLDER_IMAGE}
+                    alt={article.title}
+                    fill
+                    className="object-cover"
+                  />
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <h4 className={`font-medium ${i === 0 ? 'text-sm' : 'text-xs'} line-clamp-2 leading-snug`}>
+                <h4
+                  className={`font-medium ${
+                    i === 0 ? "text-sm" : "text-xs"
+                  } line-clamp-2 leading-snug`}
+                >
                   {article.title}
                 </h4>
                 {i === 0 && (
-                  <span className="text-[10px] opacity-60 mt-0.5 block">{article.read_time}</span>
+                  <span className="text-[10px] opacity-60 mt-0.5 block">
+                    {article.read_time || "3 min"}
+                  </span>
                 )}
               </div>
             </Link>
@@ -62,17 +110,49 @@ function CategorySection({ categorySlug, title, emoji, gradient, textColor = "te
   );
 }
 
-export default function HomePage() {
-  const featured = featuredNews || newsArticles[0];
-  const sideNews = newsArticles.filter((n) => n.id !== featured.id).slice(0, 4);
-  const trendingNews = [...newsArticles].sort((a, b) => b.views_count - a.views_count).slice(0, 5);
+export default async function HomePage() {
+  // Fetch data from Supabase
+  const [
+    allArticles,
+    featuredArticles,
+    trendingArticles,
+    breakingNewsArticles,
+    categories,
+    trendingTags,
+    politikArticles,
+    ekonomiArticles,
+    teknologiArticles,
+    olahragaArticles,
+    hiburanArticles,
+  ] = await Promise.all([
+    getPublishedArticles({ limit: 20 }),
+    getFeaturedArticles(),
+    getTrendingArticles(5),
+    getBreakingNews(),
+    getCategories(),
+    getTrendingTagsServer(5),
+    getArticlesByCategory("politik", 3),
+    getArticlesByCategory("ekonomi", 3),
+    getArticlesByCategory("teknologi", 3),
+    getArticlesByCategory("olahraga", 3),
+    getArticlesByCategory("hiburan", 3),
+  ]);
+
+  const featured = featuredArticles[0] || allArticles[0];
+  const sideNews = allArticles.filter((n) => n.id !== featured?.id).slice(0, 4);
+  const latestNews = allArticles.slice(0, 4);
+
+  // Use breaking news for flash strip, fallback to latest articles if no breaking news
+  const flashNewsItems =
+    breakingNewsArticles.length > 0
+      ? breakingNewsArticles
+      : allArticles.slice(0, 4);
 
   return (
     <div className="bg-gradient-to-b from-muted/50 via-background to-muted/30 min-h-screen">
       {/* Main Content Area */}
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
           {/* Left Sidebar - Categories & Trending */}
           <aside className="hidden lg:block lg:col-span-2">
             <ScrollReveal>
@@ -92,7 +172,9 @@ export default function HomePage() {
                       >
                         <div
                           className="w-2.5 h-2.5 rounded-full ring-2 ring-offset-2 ring-offset-background transition-all duration-200 group-hover:scale-110"
-                          style={{ backgroundColor: cat.color, ringColor: `${cat.color}40` }}
+                          style={{
+                            backgroundColor: cat.color,
+                          }}
                         />
                         <span className="group-hover:text-foreground text-muted-foreground transition-colors font-medium">
                           {cat.name}
@@ -109,16 +191,38 @@ export default function HomePage() {
                     Trending
                   </h3>
                   <div className="space-y-2">
-                    {["#CPNS2025", "#PialaAFF", "#UMK2025", "#Nataru", "#IKN"].map((tag, i) => (
-                      <Link
-                        key={tag}
-                        href="/trending"
-                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-orange-600 dark:hover:text-orange-400 transition-colors group"
-                      >
-                        <span className="text-xs font-bold text-orange-500/50 w-4">{i + 1}</span>
-                        <span className="group-hover:translate-x-0.5 transition-transform">{tag}</span>
-                      </Link>
-                    ))}
+                    {trendingTags.length > 0
+                      ? trendingTags.map((tag, i) => (
+                          <Link
+                            key={tag.id}
+                            href={`/tag/${tag.slug}`}
+                            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-orange-600 dark:hover:text-orange-400 transition-colors group"
+                          >
+                            <span className="text-xs font-bold text-orange-500/50 w-4">
+                              {i + 1}
+                            </span>
+                            <span className="group-hover:translate-x-0.5 transition-transform">
+                              #{tag.name}
+                            </span>
+                          </Link>
+                        ))
+                      : // Fallback jika tidak ada tags
+                        ["Trending", "Berita", "Terkini", "Update", "Hot"].map(
+                          (tag, i) => (
+                            <Link
+                              key={tag}
+                              href="/trending"
+                              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-orange-600 dark:hover:text-orange-400 transition-colors group"
+                            >
+                              <span className="text-xs font-bold text-orange-500/50 w-4">
+                                {i + 1}
+                              </span>
+                              <span className="group-hover:translate-x-0.5 transition-transform">
+                                #{tag}
+                              </span>
+                            </Link>
+                          )
+                        )}
                   </div>
                 </div>
               </div>
@@ -128,32 +232,40 @@ export default function HomePage() {
           {/* Main Content */}
           <main className="lg:col-span-7 space-y-6">
             {/* Hero Section */}
-            <ScrollReveal>
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                {/* Featured Big Card */}
-                <div className="md:col-span-3">
-                  <NewsCard article={featured} variant="featured" />
-                </div>
+            {featured && (
+              <ScrollReveal>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  {/* Featured Big Card */}
+                  <div className="md:col-span-3">
+                    <NewsCard article={featured} variant="featured" />
+                  </div>
 
-                {/* Side Stack */}
-                <div className="md:col-span-2 space-y-4">
-                  {sideNews.slice(0, 2).map((article) => (
-                    <NewsCard key={article.id} article={article} variant="horizontal" />
-                  ))}
+                  {/* Side Stack */}
+                  <div className="md:col-span-2 space-y-4">
+                    {sideNews.slice(0, 2).map((article) => (
+                      <NewsCard
+                        key={article.id}
+                        article={article}
+                        variant="horizontal"
+                      />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </ScrollReveal>
+              </ScrollReveal>
+            )}
 
             {/* Flash News Strip */}
             <ScrollReveal>
               <div className="flex items-center gap-4 p-3 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-xl border border-primary/20">
                 <div className="flex items-center gap-1.5 shrink-0">
                   <Zap className="h-4 w-4 text-primary" />
-                  <span className="font-bold text-xs text-primary">Flash</span>
+                  <span className="font-bold text-xs text-primary">
+                    {breakingNewsArticles.length > 0 ? "Breaking" : "Flash"}
+                  </span>
                 </div>
                 <div className="flex-1 overflow-hidden">
                   <div className="flex gap-8 animate-marquee whitespace-nowrap">
-                    {newsArticles.slice(0, 4).map((article) => (
+                    {flashNewsItems.map((article) => (
                       <Link
                         key={article.id}
                         href={`/news/${article.slug}`}
@@ -175,12 +287,14 @@ export default function HomePage() {
                   title="Politik"
                   emoji="🏛️"
                   gradient="bg-gradient-to-br from-red-600 to-rose-700"
+                  articles={politikArticles}
                 />
                 <CategorySection
                   categorySlug="ekonomi"
                   title="Ekonomi"
                   emoji="💰"
                   gradient="bg-gradient-to-br from-emerald-600 to-teal-700"
+                  articles={ekonomiArticles}
                 />
               </div>
             </ScrollReveal>
@@ -202,7 +316,7 @@ export default function HomePage() {
               </div>
 
               <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {latestNews.slice(0, 4).map((article) => (
+                {latestNews.map((article) => (
                   <StaggerItem key={article.id}>
                     <NewsCard article={article} showExcerpt={false} />
                   </StaggerItem>
@@ -218,18 +332,21 @@ export default function HomePage() {
                   title="Teknologi"
                   emoji="💻"
                   gradient="bg-gradient-to-br from-blue-600 to-indigo-700"
+                  articles={teknologiArticles}
                 />
                 <CategorySection
                   categorySlug="olahraga"
                   title="Olahraga"
                   emoji="⚽"
                   gradient="bg-gradient-to-br from-orange-500 to-amber-600"
+                  articles={olahragaArticles}
                 />
                 <CategorySection
                   categorySlug="hiburan"
                   title="Hiburan"
                   emoji="🎬"
                   gradient="bg-gradient-to-br from-purple-600 to-pink-600"
+                  articles={hiburanArticles}
                 />
               </div>
             </ScrollReveal>
@@ -244,19 +361,27 @@ export default function HomePage() {
                       <span className="text-base">🇮🇩</span>
                       Nasional
                     </h3>
-                    <Link href="/category/nasional" className="text-xs opacity-70 hover:opacity-100 transition-opacity flex items-center gap-0.5">
+                    <Link
+                      href="/category/nasional"
+                      className="text-xs opacity-70 hover:opacity-100 transition-opacity flex items-center gap-0.5"
+                    >
                       Semua <ChevronRight className="h-3 w-3" />
                     </Link>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {newsArticles.slice(0, 4).map((article, i) => (
+                    {allArticles.slice(0, 4).map((article) => (
                       <Link
                         key={article.id}
                         href={`/news/${article.slug}`}
                         className="p-2.5 bg-white/5 backdrop-blur-sm rounded-xl hover:bg-white/10 transition-colors group"
                       >
                         <div className="relative h-20 w-full rounded-lg overflow-hidden mb-2">
-                          <Image src={article.image_url} alt={article.title} fill className="object-cover" />
+                          <Image
+                            src={article.image_url || PLACEHOLDER_IMAGE}
+                            alt={article.title}
+                            fill
+                            className="object-cover"
+                          />
                         </div>
                         <h4 className="font-medium text-xs line-clamp-2 leading-snug">
                           {article.title}
@@ -282,7 +407,7 @@ export default function HomePage() {
                     </h3>
                   </div>
                   <div className="p-3 space-y-0.5">
-                    {trendingNews.map((article, index) => (
+                    {trendingArticles.map((article, index) => (
                       <Link
                         key={article.id}
                         href={`/news/${article.slug}`}
@@ -322,7 +447,10 @@ export default function HomePage() {
                       placeholder="Email Anda"
                       className="w-full px-3 py-2 text-xs rounded-lg bg-white/20 backdrop-blur-sm border border-white/30 placeholder:text-primary-foreground/50 focus:outline-none focus:ring-2 focus:ring-white/50 mb-2"
                     />
-                    <button className="w-full px-3 py-2 text-xs bg-white text-primary rounded-lg font-bold hover:bg-white/90 transition-colors shadow-lg">
+                    <button
+                      type="button"
+                      className="w-full px-3 py-2 text-xs bg-white text-primary rounded-lg font-bold hover:bg-white/90 transition-colors shadow-lg"
+                    >
                       Berlangganan Gratis
                     </button>
                   </div>
@@ -336,14 +464,16 @@ export default function HomePage() {
                     Baca Juga
                   </h3>
                   <div className="space-y-0.5">
-                    {newsArticles.slice(5, 8).map((article) => (
+                    {allArticles.slice(5, 8).map((article) => (
                       <Link
                         key={article.id}
                         href={`/news/${article.slug}`}
                         className="flex items-start gap-1.5 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors group"
                       >
                         <ChevronRight className="h-3 w-3 shrink-0 mt-0.5 text-primary/50 group-hover:text-primary transition-colors" />
-                        <span className="line-clamp-2 leading-snug">{article.title}</span>
+                        <span className="line-clamp-2 leading-snug">
+                          {article.title}
+                        </span>
                       </Link>
                     ))}
                   </div>

@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { MainLayoutWrapper } from "@/components/layout/MainLayoutWrapper";
+import { AuthProvider } from "@/components/providers/AuthProvider";
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -10,6 +12,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://beritaae.com"
+  ),
   title: {
     default: "BeritaAE - Portal Berita Terkini Indonesia",
     template: "%s | BeritaAE",
@@ -64,17 +69,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`} suppressHydrationWarning>
+      <body
+        className={`${inter.variable} font-sans antialiased`}
+        suppressHydrationWarning
+      >
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          <MainLayoutWrapper>{children}</MainLayoutWrapper>
+          <AuthProvider>
+            <MainLayoutWrapper>{children}</MainLayoutWrapper>
+          </AuthProvider>
+          <Toaster richColors position="top-center" />
         </ThemeProvider>
       </body>
     </html>
   );
 }
-
