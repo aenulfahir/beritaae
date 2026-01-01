@@ -948,10 +948,12 @@ export async function getCompanyTeamData() {
       .select("*")
       .order("display_order", { ascending: true });
 
-    // Group by department
-    const departments = [
+    // Group by department - filter out undefined values and cast to string[]
+    const departments: string[] = [
       ...new Set(
-        (members || []).map((m: TeamMember) => m.department).filter(Boolean)
+        (members || [])
+          .map((m: TeamMember) => m.department)
+          .filter((d): d is string => typeof d === "string" && d.length > 0)
       ),
     ];
 
