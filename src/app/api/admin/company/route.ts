@@ -13,7 +13,8 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Check if user is admin
-    const { data: profile } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: profile } = await (supabase as any)
       .from("profiles")
       .select("role")
       .eq("id", user.id)
@@ -72,7 +73,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is admin
-    const { data: profile } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: profile } = await (supabase as any)
       .from("profiles")
       .select("role")
       .eq("id", user.id)
@@ -125,7 +127,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Check if user is admin
-    const { data: profile } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: profile } = await (supabase as any)
       .from("profiles")
       .select("role")
       .eq("id", user.id)

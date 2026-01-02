@@ -101,9 +101,17 @@ export async function getArticlesByTagServer(
 }
 
 // Get tag by slug (server-side)
-export async function getTagBySlugServer(slug: string) {
+export async function getTagBySlugServer(slug: string): Promise<{
+  id: string;
+  name: string;
+  slug: string;
+  color: string;
+  description?: string;
+  usage_count: number;
+} | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
     .from("tags")
     .select("*")
     .eq("slug", slug)
