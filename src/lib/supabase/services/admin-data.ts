@@ -570,7 +570,19 @@ export async function getAdminPopularData(period: string = "all") {
   }
 }
 
-export async function getAdminMediaData() {
+export async function getAdminMediaData(): Promise<{
+  media: {
+    id: string;
+    name: string;
+    url: string;
+    size: number;
+    type: "image" | "video" | "audio" | "document";
+    bucket: string;
+    path: string;
+    createdAt: string;
+    updatedAt: string;
+  }[];
+}> {
   const supabase = await createClient();
 
   try {
