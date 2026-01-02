@@ -1,11 +1,16 @@
 import { createClient } from "../client";
 
-const supabase = createClient();
+// Lazy initialization to avoid calling createClient at module load time
+// This prevents build errors when env vars are not available
+function getSupabase() {
+  return createClient();
+}
 
 export async function uploadArticleImage(
   file: File,
   articleId: string
 ): Promise<string | null> {
+  const supabase = getSupabase();
   const fileExt = file.name.split(".").pop();
   const fileName = `${articleId}-${Date.now()}.${fileExt}`;
   const filePath = `${fileName}`;
@@ -29,6 +34,7 @@ export async function uploadUserAvatar(
   file: File,
   userId: string
 ): Promise<string | null> {
+  const supabase = getSupabase();
   const fileExt = file.name.split(".").pop();
   const fileName = `avatar.${fileExt}`;
   const filePath = `${userId}/${fileName}`;
@@ -52,6 +58,7 @@ export async function deleteImage(
   bucket: "article-thumbnails" | "user-avatars",
   path: string
 ): Promise<boolean> {
+  const supabase = getSupabase();
   const { error } = await supabase.storage.from(bucket).remove([path]);
 
   if (error) {
@@ -66,11 +73,13 @@ export function getPublicUrl(
   bucket: "article-thumbnails" | "user-avatars",
   path: string
 ): string {
+  const supabase = getSupabase();
   const { data } = supabase.storage.from(bucket).getPublicUrl(path);
   return data.publicUrl;
 }
 
 export async function listArticleImages(): Promise<string[]> {
+  const supabase = getSupabase();
   const { data, error } = await supabase.storage
     .from("article-thumbnails")
     .list();

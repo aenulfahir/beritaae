@@ -5,6 +5,16 @@ import { Database } from "@/types/supabase";
 let browserClient: ReturnType<typeof createBrowserClient<Database>> | null =
   null;
 
+// Check if we're in build/prerender phase (no env vars available)
+const isBuildTime = () => {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey =
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  return !supabaseUrl || !supabaseKey;
+};
+
 export function createClient() {
   // Return existing client if available
   if (browserClient) {
@@ -18,13 +28,16 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+  // During build/SSR without env vars, return a mock client
+  // This allows static page generation to complete
   if (!supabaseUrl || !supabaseKey) {
-    // During SSR/build, return a mock client
-    if (typeof window === "undefined") {
-      return createMockBrowserClient();
+    // Only log once in development
+    if (process.env.NODE_ENV === "development") {
+      console.warn(
+        "[Supabase Client] Using mock client - env vars not available"
+      );
     }
-    console.error("[Supabase Client] Missing environment variables");
-    throw new Error("Missing Supabase environment variables");
+    return createMockBrowserClient();
   }
 
   browserClient = createBrowserClient<Database>(supabaseUrl, supabaseKey);
