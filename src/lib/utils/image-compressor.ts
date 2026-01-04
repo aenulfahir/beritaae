@@ -1,13 +1,42 @@
 /**
  * Image compression utility
  * Compresses images while maintaining good quality
+ * Supports HEIC/HEIF conversion
  */
+
+import heic2any from "heic2any";
 
 interface CompressOptions {
   maxWidth?: number;
   maxHeight?: number;
   quality?: number;
   type?: string;
+}
+
+/**
+ * Check if file is HEIC/HEIF format
+ */
+function isHeicFile(file: File): boolean {
+  const extension = file.name.toLowerCase();
+  return extension.endsWith('.heic') || extension.endsWith('.heif') ||
+    file.type === 'image/heic' || file.type === 'image/heif';
+}
+
+/**
+ * Convert HEIC file to JPEG blob
+ */
+async function convertHeicToJpeg(file: File): Promise<Blob> {
+  const result = await heic2any({
+    blob: file,
+    toType: "image/jpeg",
+    quality: 0.9,
+  });
+
+  // heic2any can return an array or single blob
+  if (Array.isArray(result)) {
+    return result[0];
+  }
+  return result;
 }
 
 export async function compressImage(
@@ -21,9 +50,20 @@ export async function compressImage(
     type = "image/jpeg",
   } = options;
 
+  // Convert HEIC to JPEG first if needed
+  let imageBlob: Blob = file;
+  if (isHeicFile(file)) {
+    try {
+      imageBlob = await convertHeicToJpeg(file);
+    } catch (error) {
+      console.error("HEIC conversion failed:", error);
+      throw new Error("Gagal mengkonversi file HEIC. Silakan konversi ke JPEG terlebih dahulu.");
+    }
+  }
+
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(imageBlob);
     reader.onload = (event) => {
       const img = new Image();
       img.src = event.target?.result as string;
@@ -83,3 +123,4 @@ export function formatFileSize(bytes: number): string {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
+

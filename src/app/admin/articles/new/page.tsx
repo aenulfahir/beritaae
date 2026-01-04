@@ -58,6 +58,7 @@ export default function NewArticlePage() {
     isBreaking: false,
     isFeatured: false,
     status: "draft" as "draft" | "published",
+    readTime: "",
   });
 
   useEffect(() => {
@@ -118,6 +119,7 @@ export default function NewArticlePage() {
         status: publish ? "published" : "draft",
         is_breaking: formData.isBreaking,
         is_featured: formData.isFeatured,
+        read_time: formData.readTime || undefined,
       });
 
       if (article) {
@@ -213,7 +215,7 @@ export default function NewArticlePage() {
       console.error("Error uploading image:", error);
       alert(
         "Terjadi kesalahan saat mengunggah gambar: " +
-          (error instanceof Error ? error.message : "Unknown error")
+        (error instanceof Error ? error.message : "Unknown error")
       );
     } finally {
       setIsUploading(false);
@@ -553,6 +555,29 @@ export default function NewArticlePage() {
                       setFormData({ ...formData, isFeatured: checked })
                     }
                   />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Reading Time */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Waktu Baca</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="readTime">Estimasi Waktu Baca</Label>
+                  <Input
+                    id="readTime"
+                    placeholder="Contoh: 5 menit"
+                    value={formData.readTime}
+                    onChange={(e) =>
+                      setFormData({ ...formData, readTime: e.target.value })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Jika kosong, akan menggunakan "5 menit" sebagai default.
+                  </p>
                 </div>
               </CardContent>
             </Card>

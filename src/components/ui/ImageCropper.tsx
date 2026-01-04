@@ -16,7 +16,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Loader2, Check, X, RotateCcw } from "lucide-react";
+import { Loader2, Check, X, RotateCcw, Square, RectangleHorizontal, Maximize } from "lucide-react";
 
 interface ImageCropperProps {
   open: boolean;
@@ -25,7 +25,21 @@ interface ImageCropperProps {
   onCropComplete: (croppedBlob: Blob) => void;
   aspectRatio?: number;
   title?: string;
+  showAspectSelector?: boolean;
 }
+
+type AspectOption = {
+  label: string;
+  value: number | undefined;
+  icon: React.ReactNode;
+};
+
+const ASPECT_OPTIONS: AspectOption[] = [
+  { label: "16:9", value: 16 / 9, icon: <RectangleHorizontal className="h-4 w-4" /> },
+  { label: "4:3", value: 4 / 3, icon: <RectangleHorizontal className="h-4 w-4" /> },
+  { label: "1:1", value: 1, icon: <Square className="h-4 w-4" /> },
+  { label: "Bebas", value: undefined, icon: <Maximize className="h-4 w-4" /> },
+];
 
 function centerAspectCrop(
   mediaWidth: number,
@@ -52,21 +66,39 @@ export function ImageCropper({
   onClose,
   imageSrc,
   onCropComplete,
-  aspectRatio = 16 / 9,
+  aspectRatio: initialAspectRatio = 16 / 9,
   title = "Crop Gambar",
+  showAspectSelector = true,
 }: ImageCropperProps) {
   const imgRef = useRef<HTMLImageElement>(null);
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState<number | undefined>(initialAspectRatio);
 
   const onImageLoad = useCallback(
     (e: React.SyntheticEvent<HTMLImageElement>) => {
       const { width, height } = e.currentTarget;
-      setCrop(centerAspectCrop(width, height, aspectRatio));
+      if (aspectRatio) {
+        setCrop(centerAspectCrop(width, height, aspectRatio));
+      } else {
+        setCrop({ unit: "%", width: 90, height: 90, x: 5, y: 5 });
+      }
     },
     [aspectRatio]
   );
+
+  const handleAspectChange = (newAspect: number | undefined) => {
+    setAspectRatio(newAspect);
+    if (imgRef.current) {
+      const { width, height } = imgRef.current;
+      if (newAspect) {
+        setCrop(centerAspectCrop(width, height, newAspect));
+      } else {
+        setCrop({ unit: "%", width: 90, height: 90, x: 5, y: 5 });
+      }
+    }
+  };
 
   const handleCrop = async () => {
     if (!completedCrop || !imgRef.current) return;
@@ -144,7 +176,11 @@ export function ImageCropper({
   const handleReset = () => {
     if (imgRef.current) {
       const { width, height } = imgRef.current;
-      setCrop(centerAspectCrop(width, height, aspectRatio));
+      if (aspectRatio) {
+        setCrop(centerAspectCrop(width, height, aspectRatio));
+      } else {
+        setCrop({ unit: "%", width: 90, height: 90, x: 5, y: 5 });
+      }
     }
   };
 
@@ -156,11 +192,31 @@ export function ImageCropper({
         </DialogHeader>
 
         <div className="flex flex-col items-center gap-4">
+          {/* Aspect Ratio Selector */}
+          {showAspectSelector && (
+            <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+              <span className="text-sm text-muted-foreground mr-2">Rasio:</span>
+              {ASPECT_OPTIONS.map((option) => (
+                <Button
+                  key={option.label}
+                  type="button"
+                  variant={aspectRatio === option.value ? "secondary" : "ghost"}
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => handleAspectChange(option.value)}
+                >
+                  {option.icon}
+                  {option.label}
+                </Button>
+              ))}
+            </div>
+          )}
+
           <p className="text-sm text-muted-foreground">
-            Sesuaikan area crop untuk gambar artikel (rasio 16:9)
+            Sesuaikan area crop untuk gambar artikel
           </p>
 
-          <div className="max-h-[60vh] overflow-auto">
+          <div className="max-h-[55vh] overflow-auto">
             <ReactCrop
               crop={crop}
               onChange={(_, percentCrop) => setCrop(percentCrop)}
@@ -173,7 +229,7 @@ export function ImageCropper({
                 src={imageSrc}
                 alt="Crop preview"
                 onLoad={onImageLoad}
-                className="max-w-full max-h-[55vh] object-contain"
+                className="max-w-full max-h-[50vh] object-contain"
               />
             </ReactCrop>
           </div>
@@ -215,3 +271,4 @@ export function ImageCropper({
     </Dialog>
   );
 }
+

@@ -3,6 +3,8 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
+import { CustomImage } from "@/lib/tiptap/CustomImage";
+import { ImageGallery } from "@/lib/tiptap/ImageGallery";
 import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
@@ -31,7 +33,11 @@ import {
   Code,
   Upload,
   Loader2,
+  Maximize,
+  Minimize,
+  Grid,
 } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { compressImage } from "@/lib/utils/image-compressor";
@@ -65,11 +71,12 @@ export function RichTextEditor({
           class: "text-primary underline",
         },
       }),
-      Image.configure({
+      CustomImage.configure({
         HTMLAttributes: {
-          class: "max-w-full h-auto rounded-lg",
+          class: "rounded-lg",
         },
       }),
+      ImageGallery,
       Placeholder.configure({
         placeholder,
       }),
@@ -83,7 +90,7 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm sm:prose dark:prose-invert max-w-none min-h-[300px] p-4 focus:outline-none",
+          "prose prose-lg dark:prose-invert prose-headings:font-bold prose-a:text-primary prose-img:rounded-xl max-w-none min-h-[300px] p-4 focus:outline-none",
       },
     },
     onUpdate: ({ editor }) => {
@@ -126,71 +133,75 @@ export function RichTextEditor({
 
   const handleImageUpload = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file || !editor) return;
-
-      // Validate file type
-      if (!file.type.startsWith("image/")) {
-        alert("File harus berupa gambar");
-        return;
-      }
-
-      // Validate file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        alert("Ukuran file maksimal 10MB");
-        return;
-      }
+      const files = e.target.files;
+      if (!files || files.length === 0 || !editor) return;
 
       setIsUploading(true);
 
       try {
-        // Compress image
-        const compressedBlob = await compressImage(file, {
-          maxWidth: 1200,
-          maxHeight: 800,
-          quality: 0.85,
-          type: "image/jpeg",
-        });
+        const uploadPromises = Array.from(files).map(async (file) => {
+          // Validate file type (check MIME type and extension for HEIC support)
+          const validExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif', '.avif', '.bmp'];
+          const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+          const isValidType = file.type.startsWith("image/") || validExtensions.includes(fileExtension);
 
-        // Generate unique filename
-        const timestamp = Date.now();
-        const randomStr = Math.random().toString(36).substring(2, 8);
-        const fileName = `content/${timestamp}-${randomStr}.jpg`;
+          if (!isValidType) {
+            throw new Error(`File ${file.name} harus berupa gambar`);
+          }
 
-        // Upload to Supabase Storage
-        const supabase = createClient();
+          // Validate file size (max 10MB)
+          if (file.size > 10 * 1024 * 1024) {
+            throw new Error(`Ukuran file ${file.name} maksimal 10MB`);
+          }
 
-        const { data, error } = await supabase.storage
-          .from("media")
-          .upload(fileName, compressedBlob, {
-            contentType: "image/jpeg",
-            upsert: false,
+          // Compress image
+          const compressedBlob = await compressImage(file, {
+            maxWidth: 1200,
+            maxHeight: 800,
+            quality: 0.85,
+            type: "image/jpeg",
           });
 
-        if (error) {
-          console.error("Upload error:", error);
-          if (error.message.includes("Bucket not found")) {
-            alert(
-              "Bucket 'media' belum dibuat. Silakan buat bucket di Supabase Dashboard > Storage."
-            );
-          } else {
-            alert("Gagal mengunggah gambar: " + error.message);
-          }
-          return;
+          // Generate unique filename
+          const timestamp = Date.now();
+          const randomStr = Math.random().toString(36).substring(2, 8);
+          const fileName = `content/${timestamp}-${randomStr}.jpg`;
+
+          // Upload to Supabase Storage
+          const supabase = createClient();
+
+          const { data, error } = await supabase.storage
+            .from("media")
+            .upload(fileName, compressedBlob, {
+              contentType: "image/jpeg",
+              upsert: false,
+            });
+
+          if (error) throw error;
+
+          const {
+            data: { publicUrl },
+          } = supabase.storage.from("media").getPublicUrl(data.path);
+
+          return {
+            src: publicUrl,
+            id: randomStr,
+            alt: file.name,
+          };
+        });
+
+        const uploadedImages = await Promise.all(uploadPromises);
+
+        if (uploadedImages.length === 1) {
+          editor.chain().focus().setImage({ src: uploadedImages[0].src }).run();
+        } else {
+          editor.chain().focus().setImageGallery({ images: uploadedImages }).run();
         }
-
-        // Get public URL
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from("media").getPublicUrl(data.path);
-
-        // Insert image into editor
-        editor.chain().focus().setImage({ src: publicUrl }).run();
       } catch (error) {
         console.error("Error uploading image:", error);
         alert(
           "Terjadi kesalahan saat mengunggah gambar: " +
-            (error instanceof Error ? error.message : "Unknown error")
+          (error instanceof Error ? error.message : "Unknown error")
         );
       } finally {
         setIsUploading(false);
@@ -219,6 +230,7 @@ export function RichTextEditor({
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        multiple
         onChange={handleImageUpload}
         className="hidden"
         disabled={isUploading}
@@ -409,6 +421,48 @@ export function RichTextEditor({
 
       {/* Editor */}
       <div className="relative">
+        {/* Image Resize Toolbar */}
+        {editor && editor.isActive("image") && (
+          <div className="flex items-center gap-1 p-2 mb-2 rounded-lg border bg-muted/50">
+            <span className="text-xs text-muted-foreground mr-2">Ukuran Gambar:</span>
+            <Button
+              type="button"
+              variant={editor.getAttributes("image").width === "25%" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => editor.chain().focus().updateAttributes("image", { width: "25%" }).run()}
+            >
+              25%
+            </Button>
+            <Button
+              type="button"
+              variant={editor.getAttributes("image").width === "50%" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => editor.chain().focus().updateAttributes("image", { width: "50%" }).run()}
+            >
+              50%
+            </Button>
+            <Button
+              type="button"
+              variant={editor.getAttributes("image").width === "75%" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => editor.chain().focus().updateAttributes("image", { width: "75%" }).run()}
+            >
+              75%
+            </Button>
+            <Button
+              type="button"
+              variant={editor.getAttributes("image").width === "100%" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => editor.chain().focus().updateAttributes("image", { width: "100%" }).run()}
+            >
+              100%
+            </Button>
+          </div>
+        )}
         <EditorContent editor={editor} className="bg-background" />
         {isUploading && (
           <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-10">
