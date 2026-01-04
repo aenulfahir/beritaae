@@ -4,8 +4,6 @@
  * Supports HEIC/HEIF conversion
  */
 
-import heic2any from "heic2any";
-
 interface CompressOptions {
   maxWidth?: number;
   maxHeight?: number;
@@ -24,8 +22,12 @@ function isHeicFile(file: File): boolean {
 
 /**
  * Convert HEIC file to JPEG blob
+ * Uses dynamic import to avoid SSR issues
  */
 async function convertHeicToJpeg(file: File): Promise<Blob> {
+  // Dynamic import to avoid "window is not defined" during SSR
+  const heic2any = (await import("heic2any")).default;
+
   const result = await heic2any({
     blob: file,
     toType: "image/jpeg",
