@@ -86,6 +86,7 @@ export async function getArticlesByTagServer(
 ): Promise<TagArticle[]> {
   const supabase = await createClient();
 
+  // Try RPC function first
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any).rpc("get_articles_by_tag", {
     p_tag_slug: tagSlug,
@@ -94,10 +95,92 @@ export async function getArticlesByTagServer(
 
   if (error) {
     console.error("Error fetching articles by tag:", error);
-    return [];
+    // Fallback: manual join query
+    return getArticlesByTagFallback(supabase, tagSlug, limit);
   }
 
   return data || [];
+}
+
+// Fallback function for getting articles by tag
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getArticlesByTagFallback(
+  supabase: any,
+  tagSlug: string,
+  limit: number
+): Promise<TagArticle[]> {
+  try {
+    // First get the tag ID
+    const { data: tagData, error: tagError } = await supabase
+      .from("tags")
+      .select("id")
+      .eq("slug", tagSlug)
+      .single();
+
+    if (tagError || !tagData) {
+      console.error("Error finding tag:", tagError);
+      return [];
+    }
+
+    // Get article IDs for this tag
+    const { data: articleTagsData, error: articleTagsError } = await supabase
+      .from("article_tags")
+      .select("article_id")
+      .eq("tag_id", tagData.id);
+
+    if (articleTagsError || !articleTagsData || articleTagsData.length === 0) {
+      return [];
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const articleIds = articleTagsData.map((at: any) => at.article_id);
+
+    // Get articles with their relations
+    const { data: articlesData, error: articlesError } = await supabase
+      .from("articles")
+      .select(
+        `
+        id,
+        title,
+        slug,
+        excerpt,
+        image_url,
+        views_count,
+        published_at,
+        category:categories (name, slug, color),
+        author:profiles!articles_author_id_fkey (full_name, avatar_url)
+      `
+      )
+      .in("id", articleIds)
+      .eq("status", "published")
+      .order("published_at", { ascending: false })
+      .limit(limit);
+
+    if (articlesError) {
+      console.error("Error fetching articles:", articlesError);
+      return [];
+    }
+
+    // Transform to TagArticle format
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (articlesData || []).map((article: any) => ({
+      article_id: article.id,
+      title: article.title,
+      slug: article.slug,
+      excerpt: article.excerpt || "",
+      image_url: article.image_url || "/placeholder.jpg",
+      views_count: article.views_count || 0,
+      published_at: article.published_at || new Date().toISOString(),
+      category_name: article.category?.name || "Umum",
+      category_slug: article.category?.slug || "umum",
+      category_color: article.category?.color || "#6366f1",
+      author_name: article.author?.full_name || "Anonymous",
+      author_avatar: article.author?.avatar_url || "",
+    }));
+  } catch (err) {
+    console.error("Error in fallback articles by tag:", err);
+    return [];
+  }
 }
 
 // Get tag by slug (server-side)
