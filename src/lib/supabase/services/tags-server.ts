@@ -91,6 +91,10 @@ async function getArticlesByTagFallback(
       .single();
 
     if (tagError || !tagData) {
+      // Tag not found is not an error, just return empty
+      if (tagError?.code === "PGRST116") {
+        return [];
+      }
       console.error("Error finding tag:", tagError);
       return [];
     }
@@ -101,14 +105,20 @@ async function getArticlesByTagFallback(
       .select("article_id")
       .eq("tag_id", tagData.id);
 
-    if (articleTagsError || !articleTagsData || articleTagsData.length === 0) {
+    if (articleTagsError) {
+      console.error("Error fetching article_tags:", articleTagsError);
+      return [];
+    }
+
+    if (!articleTagsData || articleTagsData.length === 0) {
+      // No articles with this tag - not an error
       return [];
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const articleIds = articleTagsData.map((at: any) => at.article_id);
 
-    // Get articles with their relations
+    // Get articles with their relations - use simpler query without explicit foreign key hint
     const { data: articlesData, error: articlesError } = await supabase
       .from("articles")
       .select(
@@ -121,7 +131,7 @@ async function getArticlesByTagFallback(
         views_count,
         published_at,
         category:categories (name, slug, color),
-        author:profiles!articles_author_id_fkey (full_name, avatar_url)
+        author:profiles (full_name, avatar_url)
       `
       )
       .in("id", articleIds)
@@ -174,7 +184,10 @@ export async function getTagBySlugServer(slug: string): Promise<{
     .single();
 
   if (error) {
-    console.error("Error fetching tag:", error);
+    // PGRST116 = no rows found, which is expected for non-existent tags
+    if (error.code !== "PGRST116") {
+      console.error("Error fetching tag:", error);
+    }
     return null;
   }
   return data;
