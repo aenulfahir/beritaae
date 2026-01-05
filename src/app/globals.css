@@ -315,3 +315,48 @@ html {
 .tiptap a:hover {
   color: oklch(0.6 0.243 264.376);
 }
+
+/* Article Content Prose Styles - Spacing antar paragraf */
+.prose p {
+  margin-bottom: 1.5em;
+  line-height: 1.8;
+}
+
+.prose p + p {
+  margin-top: 1.5em;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4 {
+  margin-top: 2em;
+  margin-bottom: 1em;
+}
+
+.prose ul,
+.prose ol {
+  margin-top: 1.25em;
+  margin-bottom: 1.25em;
+}
+
+.prose li {
+  margin-bottom: 0.5em;
+}
+
+.prose blockquote {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+  padding-left: 1.5em;
+  border-left: 4px solid oklch(0.7 0 0 / 50%);
+}
+
+.prose img {
+  margin-top: 2em;
+  margin-bottom: 2em;
+}
+
+.prose hr {
+  margin-top: 2em;
+  margin-bottom: 2em;
+}
