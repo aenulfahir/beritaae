@@ -12,6 +12,9 @@ import { Flame, Eye, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
+// Force dynamic rendering for this page
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Terpopuler",
   description: "Berita paling populer dan banyak dibaca di BeritaAE.",

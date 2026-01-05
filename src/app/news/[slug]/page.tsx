@@ -10,6 +10,9 @@ import { getCategories } from "@/lib/supabase/services/categories-server";
 import { getArticleEngagement } from "@/lib/supabase/services/engagement-server";
 import { createClient } from "@/lib/supabase/server";
 
+// Force dynamic rendering for this page
+export const dynamic = "force-dynamic";
+
 interface NewsPageProps {
   params: Promise<{ slug: string }>;
 }

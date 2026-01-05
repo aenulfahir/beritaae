@@ -26,6 +26,9 @@ import { getCategories } from "@/lib/supabase/services/categories-server";
 import { getTrendingTagsServer } from "@/lib/supabase/services/tags-server";
 import { NewsArticle } from "@/types";
 
+// Force dynamic rendering for this page
+export const dynamic = "force-dynamic";
+
 // Category Section Component
 const PLACEHOLDER_IMAGE =
   "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800";

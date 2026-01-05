@@ -10,6 +10,9 @@ import {
 } from "@/lib/supabase/services/categories";
 import { getArticlesByCategory } from "@/lib/supabase/services/articles";
 
+// Force dynamic rendering for this page
+export const dynamic = "force-dynamic";
+
 interface CategoryPageProps {
   params: Promise<{ slug: string }>;
 }

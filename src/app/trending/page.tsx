@@ -5,12 +5,13 @@ import {
 } from "@/lib/supabase/services/tags-server";
 import TrendingClient from "./TrendingClient";
 
+// Force dynamic rendering for this page
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Trending",
   description: "Berita trending dan paling banyak dibicarakan di BeritaKita.",
 };
-
-export const revalidate = 300; // Revalidate every 5 minutes
 
 export default async function TrendingPage() {
   // Fetch data server-side

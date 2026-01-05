@@ -6,6 +6,9 @@ import {
 } from "@/lib/supabase/services/tags-server";
 import TagPageClient from "./TagPageClient";
 
+// Force dynamic rendering for this page
+export const dynamic = "force-dynamic";
+
 interface TagPageProps {
   params: Promise<{ slug: string }>;
 }
