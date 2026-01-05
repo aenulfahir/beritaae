@@ -40,7 +40,9 @@ import { createClient } from "@/lib/supabase/client";
 import { formatFileSize } from "@/lib/utils/image-compressor";
 import { ImageCropper } from "@/components/ui/ImageCropper";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
+import { TagSelector } from "@/components/admin/TagSelector";
 import { Category, NewsArticle } from "@/types";
+import { Tag } from "@/lib/supabase/services/tags";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -52,6 +54,7 @@ export default function EditArticlePage({ params }: PageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [article, setArticle] = useState<NewsArticle | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -266,7 +269,7 @@ export default function EditArticlePage({ params }: PageProps) {
       console.error("Error uploading image:", error);
       alert(
         "Terjadi kesalahan saat mengunggah gambar: " +
-        (error instanceof Error ? error.message : "Unknown error")
+          (error instanceof Error ? error.message : "Unknown error")
       );
     } finally {
       setIsUploading(false);
@@ -567,6 +570,13 @@ export default function EditArticlePage({ params }: PageProps) {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Tags */}
+            <TagSelector
+              articleId={id}
+              selectedTags={selectedTags}
+              onTagsChange={setSelectedTags}
+            />
 
             {/* Status */}
             <Card>

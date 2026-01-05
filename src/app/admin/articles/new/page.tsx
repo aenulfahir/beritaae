@@ -34,14 +34,17 @@ import { createClient } from "@/lib/supabase/client";
 import { formatFileSize } from "@/lib/utils/image-compressor";
 import { ImageCropper } from "@/components/ui/ImageCropper";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
+import { TagSelector } from "@/components/admin/TagSelector";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { Category } from "@/types";
+import { Tag, addTagToArticle } from "@/lib/supabase/services/tags";
 
 export default function NewArticlePage() {
   const router = useRouter();
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -123,6 +126,13 @@ export default function NewArticlePage() {
       });
 
       if (article) {
+        // Save tags to article
+        if (selectedTags.length > 0) {
+          for (const tag of selectedTags) {
+            await addTagToArticle(article.id, tag.id);
+          }
+        }
+
         alert(
           publish
             ? "Artikel berhasil dipublikasikan!"
@@ -215,7 +225,7 @@ export default function NewArticlePage() {
       console.error("Error uploading image:", error);
       alert(
         "Terjadi kesalahan saat mengunggah gambar: " +
-        (error instanceof Error ? error.message : "Unknown error")
+          (error instanceof Error ? error.message : "Unknown error")
       );
     } finally {
       setIsUploading(false);
@@ -512,6 +522,12 @@ export default function NewArticlePage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Tags */}
+            <TagSelector
+              selectedTags={selectedTags}
+              onTagsChange={setSelectedTags}
+            />
 
             {/* Status */}
             <Card>
