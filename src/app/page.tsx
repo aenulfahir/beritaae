@@ -142,7 +142,7 @@ export default async function HomePage() {
   ]);
 
   const featured = featuredArticles[0] || allArticles[0];
-  const sideNews = allArticles.filter((n) => n.id !== featured?.id).slice(0, 4);
+  const sideNews = allArticles.filter((n) => n.id !== featured?.id).slice(0, 5);
   const latestNews = allArticles.slice(0, 4);
 
   // Use breaking news for flash strip, fallback to latest articles if no breaking news
@@ -234,26 +234,175 @@ export default async function HomePage() {
 
           {/* Main Content */}
           <main className="lg:col-span-7 space-y-6">
-            {/* Hero Section */}
+            {/* Hero Section - Modern Bento Grid */}
             {featured && (
               <ScrollReveal>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                  {/* Featured Big Card */}
-                  <div className="md:col-span-3">
-                    <NewsCard article={featured} variant="featured" />
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                  {/* Featured Big Card - Takes 8 columns */}
+                  <div className="md:col-span-8 md:row-span-2">
+                    <Link
+                      href={`/news/${featured.slug}`}
+                      className="block h-full group"
+                    >
+                      <div className="relative h-full min-h-[420px] rounded-2xl overflow-hidden shadow-xl">
+                        <Image
+                          src={featured.image_url || PLACEHOLDER_IMAGE}
+                          alt={featured.title}
+                          fill
+                          className="object-cover transition-transform duration-700 group-hover:scale-105"
+                          priority
+                        />
+                        {/* Gradient overlays */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent" />
+
+                        {/* Content */}
+                        <div className="absolute inset-0 p-5 flex flex-col justify-end">
+                          {/* Badges */}
+                          <div className="flex flex-wrap items-center gap-2 mb-3">
+                            {featured.is_breaking && (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-500 text-white text-xs font-bold rounded-full animate-pulse">
+                                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                                BREAKING
+                              </span>
+                            )}
+                            <span className="px-2.5 py-1 bg-white/20 backdrop-blur-md text-white text-xs font-semibold rounded-full">
+                              {featured.category?.name || "Berita"}
+                            </span>
+                            <span className="px-2.5 py-1 bg-primary/80 backdrop-blur-md text-white text-xs font-semibold rounded-full flex items-center gap-1">
+                              <Flame className="h-3 w-3" />
+                              Featured
+                            </span>
+                          </div>
+
+                          {/* Title */}
+                          <h2 className="text-2xl md:text-3xl font-bold text-white leading-tight mb-2 group-hover:text-primary/90 transition-colors">
+                            {featured.title}
+                          </h2>
+
+                          {/* Excerpt */}
+                          {featured.excerpt && (
+                            <p className="text-white/70 text-sm line-clamp-2 mb-4 max-w-xl">
+                              {featured.excerpt}
+                            </p>
+                          )}
+
+                          {/* Meta */}
+                          <div className="flex items-center gap-4 text-white/60 text-xs">
+                            <span className="flex items-center gap-1.5">
+                              <Eye className="h-3.5 w-3.5" />
+                              {(
+                                featured.views_count || 0
+                              ).toLocaleString()}{" "}
+                              views
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <TrendingUp className="h-3.5 w-3.5" />
+                              {featured.read_time || "3 min read"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Hover border effect */}
+                        <div className="absolute inset-0 rounded-2xl ring-2 ring-white/0 group-hover:ring-white/20 transition-all duration-300" />
+                      </div>
+                    </Link>
                   </div>
 
-                  {/* Side Stack */}
-                  <div className="md:col-span-2 space-y-4">
-                    {sideNews.slice(0, 2).map((article) => (
-                      <NewsCard
-                        key={article.id}
-                        article={article}
-                        variant="horizontal"
-                      />
-                    ))}
+                  {/* Side Cards - 4 columns, stacked */}
+                  <div className="md:col-span-4 grid grid-rows-2 gap-3 h-full">
+                    {/* Top Side Card - Larger */}
+                    {sideNews[0] && (
+                      <Link
+                        href={`/news/${sideNews[0].slug}`}
+                        className="block group"
+                      >
+                        <div className="relative h-full min-h-[200px] rounded-2xl overflow-hidden shadow-lg">
+                          <Image
+                            src={sideNews[0].image_url || PLACEHOLDER_IMAGE}
+                            alt={sideNews[0].title}
+                            fill
+                            className="object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                          <div className="absolute inset-0 p-4 flex flex-col justify-end">
+                            <span className="text-xs font-semibold text-primary mb-1.5">
+                              {sideNews[0].category?.name || "Berita"}
+                            </span>
+                            <h3 className="text-white font-bold text-sm leading-snug line-clamp-2 group-hover:text-primary/90 transition-colors">
+                              {sideNews[0].title}
+                            </h3>
+                            <div className="flex items-center gap-2 mt-2 text-white/50 text-[10px]">
+                              <Eye className="h-3 w-3" />
+                              {(sideNews[0].views_count || 0).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    )}
+
+                    {/* Bottom Side Card */}
+                    {sideNews[1] && (
+                      <Link
+                        href={`/news/${sideNews[1].slug}`}
+                        className="block group"
+                      >
+                        <div className="relative h-full min-h-[200px] rounded-2xl overflow-hidden shadow-lg">
+                          <Image
+                            src={sideNews[1].image_url || PLACEHOLDER_IMAGE}
+                            alt={sideNews[1].title}
+                            fill
+                            className="object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                          <div className="absolute inset-0 p-4 flex flex-col justify-end">
+                            <span className="text-xs font-semibold text-primary mb-1.5">
+                              {sideNews[1].category?.name || "Berita"}
+                            </span>
+                            <h3 className="text-white font-bold text-sm leading-snug line-clamp-2 group-hover:text-primary/90 transition-colors">
+                              {sideNews[1].title}
+                            </h3>
+                            <div className="flex items-center gap-2 mt-2 text-white/50 text-[10px]">
+                              <Eye className="h-3 w-3" />
+                              {(sideNews[1].views_count || 0).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    )}
                   </div>
                 </div>
+
+                {/* Additional Row - 3 smaller cards below */}
+                {sideNews.length > 2 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+                    {sideNews.slice(2, 5).map((article, idx) => (
+                      <Link
+                        key={article.id}
+                        href={`/news/${article.slug}`}
+                        className="block group"
+                      >
+                        <div className="relative h-32 rounded-xl overflow-hidden shadow-md">
+                          <Image
+                            src={article.image_url || PLACEHOLDER_IMAGE}
+                            alt={article.title}
+                            fill
+                            className="object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                          <div className="absolute inset-0 p-3 flex flex-col justify-end">
+                            <span className="text-[10px] font-semibold text-primary/80 mb-1">
+                              {article.category?.name || "Berita"}
+                            </span>
+                            <h4 className="text-white font-semibold text-xs leading-snug line-clamp-2 group-hover:text-primary/90 transition-colors">
+                              {article.title}
+                            </h4>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </ScrollReveal>
             )}
 
