@@ -31,23 +31,8 @@ export async function getTrendingTagsServer(
 ): Promise<TrendingTag[]> {
   const supabase = await createClient();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc("get_trending_tags", {
-    p_limit: limit,
-  });
-
-  if (error) {
-    console.error("Error fetching trending tags:", error);
-    // Fallback: get tags by usage count
-    return getFallbackTrendingTags(supabase, limit);
-  }
-
-  // If no trending tags from RPC (no recent articles), use fallback
-  if (!data || data.length === 0) {
-    return getFallbackTrendingTags(supabase, limit);
-  }
-
-  return data || [];
+  // Use direct query instead of RPC to avoid function not found errors
+  return getFallbackTrendingTags(supabase, limit);
 }
 
 // Fallback function if RPC not available
@@ -86,20 +71,8 @@ export async function getArticlesByTagServer(
 ): Promise<TagArticle[]> {
   const supabase = await createClient();
 
-  // Try RPC function first
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc("get_articles_by_tag", {
-    p_tag_slug: tagSlug,
-    p_limit: limit,
-  });
-
-  if (error) {
-    console.error("Error fetching articles by tag:", error);
-    // Fallback: manual join query
-    return getArticlesByTagFallback(supabase, tagSlug, limit);
-  }
-
-  return data || [];
+  // Use direct query instead of RPC to avoid function not found errors
+  return getArticlesByTagFallback(supabase, tagSlug, limit);
 }
 
 // Fallback function for getting articles by tag
