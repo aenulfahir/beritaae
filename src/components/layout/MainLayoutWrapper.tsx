@@ -3,7 +3,10 @@
 import { usePathname } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { BreakingNewsTicker } from "@/components/layout/BreakingNewsTicker";
+import {
+  BreakingNewsTicker,
+  TopBar,
+} from "@/components/layout/BreakingNewsTicker";
 
 export function MainLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -16,10 +19,13 @@ export function MainLayoutWrapper({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {/* Breaking news ticker (RED) - above header */}
+      {/* Top utility bar with time, location, weather + quick links */}
+      <TopBar />
+
+      {/* Breaking news ticker (RED) */}
       <BreakingNewsTicker />
 
-      {/* Header with navigation (includes location, time, weather widget) */}
+      {/* Header with navigation */}
       <Header />
 
       {/* Main content */}

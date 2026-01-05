@@ -41,7 +41,6 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
-import { LocationWeatherWidget } from "@/components/layout/LocationWeatherWidget";
 
 export function Header() {
   const { theme, setTheme } = useTheme();
@@ -79,15 +78,6 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full bg-background border-b">
-      {/* Top Bar - Location, Time, Weather */}
-      <div className="border-b bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-center py-1.5">
-            <LocationWeatherWidget />
-          </div>
-        </div>
-      </div>
-
       {/* Main Header */}
       <div className="container mx-auto px-4">
         <div className="flex h-14 items-center justify-between gap-4">
