@@ -88,33 +88,19 @@ export function NewsDetailClient({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Add click handlers to images in article content
-  useEffect(() => {
-    // Use a small delay to ensure content is rendered
-    const timeoutId = setTimeout(() => {
-      if (!contentRef.current) return;
-
-      const images = contentRef.current.querySelectorAll("img");
-
-      images.forEach((img) => {
-        // Add cursor style
-        img.style.cursor = "zoom-in";
-        // Add click handler directly
-        img.onclick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setLightboxImage({
-            src: img.src,
-            alt: img.alt || article.title,
-          });
-        };
+  // Handle click on content images using event delegation
+  const handleContentClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === "IMG") {
+      const img = target as HTMLImageElement;
+      e.preventDefault();
+      e.stopPropagation();
+      setLightboxImage({
+        src: img.src,
+        alt: img.alt || article.title,
       });
-    }, 100);
-
-    return () => {
-      clearTimeout(timeoutId);
-    };
-  }, [article.content, article.title]);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("id-ID", {
@@ -261,7 +247,8 @@ export function NewsDetailClient({
         <ScrollReveal delay={0.2}>
           <div
             ref={contentRef}
-            className="max-w-3xl mx-auto prose prose-lg dark:prose-invert prose-headings:font-bold prose-a:text-primary prose-img:rounded-xl"
+            onClick={handleContentClick}
+            className="max-w-3xl mx-auto prose prose-lg dark:prose-invert prose-headings:font-bold prose-a:text-primary prose-img:rounded-xl prose-img:cursor-zoom-in"
             dangerouslySetInnerHTML={{ __html: article.content || "" }}
           />
         </ScrollReveal>
