@@ -354,6 +354,13 @@ html {
 .prose img {
   margin-top: 2em;
   margin-bottom: 2em;
+  cursor: zoom-in;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.prose img:hover {
+  transform: scale(1.02);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
 
 .prose hr {

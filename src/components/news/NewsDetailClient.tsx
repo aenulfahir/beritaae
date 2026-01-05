@@ -90,27 +90,29 @@ export function NewsDetailClient({
 
   // Add click handlers to images in article content
   useEffect(() => {
-    if (!contentRef.current) return;
+    // Use a small delay to ensure content is rendered
+    const timeoutId = setTimeout(() => {
+      if (!contentRef.current) return;
 
-    const images = contentRef.current.querySelectorAll("img");
+      const images = contentRef.current.querySelectorAll("img");
 
-    const handleImageClick = (e: Event) => {
-      const img = e.currentTarget as HTMLImageElement;
-      setLightboxImage({
-        src: img.src,
-        alt: img.alt || article.title,
+      images.forEach((img) => {
+        // Add cursor style
+        img.style.cursor = "zoom-in";
+        // Add click handler directly
+        img.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setLightboxImage({
+            src: img.src,
+            alt: img.alt || article.title,
+          });
+        };
       });
-    };
-
-    images.forEach((img) => {
-      img.style.cursor = "zoom-in";
-      img.addEventListener("click", handleImageClick);
-    });
+    }, 100);
 
     return () => {
-      images.forEach((img) => {
-        img.removeEventListener("click", handleImageClick);
-      });
+      clearTimeout(timeoutId);
     };
   }, [article.content, article.title]);
 
