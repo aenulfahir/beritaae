@@ -154,7 +154,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
       if (!mounted) return;
 
+      console.log("[Auth] State change:", event, currentSession?.user?.email);
+
       const newToken = currentSession?.access_token ?? null;
+
+      // For SIGNED_IN event (including OAuth), always process
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        lastSessionTokenRef.current = newToken;
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+
+        if (currentSession?.user) {
+          // Small delay to allow database trigger to create profile
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          const profileData = await fetchProfile(currentSession.user.id);
+          if (mounted) {
+            setProfile(profileData);
+          }
+        }
+        setIsLoading(false);
+        return;
+      }
 
       // Skip if token hasn't changed (except for sign out)
       if (newToken === lastSessionTokenRef.current && event !== "SIGNED_OUT") {
