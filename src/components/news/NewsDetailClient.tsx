@@ -10,7 +10,7 @@ import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { NewsCard } from "@/components/news/NewsCard";
 import { CommentSection } from "@/components/news/CommentSection";
 import { ArticleActions } from "@/components/news/ArticleActions";
-import { ClickableImage, ImageLightbox } from "@/components/ui/ImageLightbox";
+import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import {
   Clock,
   Eye,
@@ -127,6 +127,14 @@ export function NewsDetailClient({
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // Handler for featured image click
+  const handleFeaturedImageClick = () => {
+    setLightboxImage({
+      src: imageUrl,
+      alt: article.title,
+    });
+  };
+
   return (
     <>
       {/* Reading Progress Bar */}
@@ -226,15 +234,24 @@ export function NewsDetailClient({
 
         {/* Featured Image */}
         <ScrollReveal delay={0.1}>
-          <div className="relative aspect-video max-w-4xl mx-auto mb-8 rounded-3xl overflow-hidden shadow-2xl">
-            <ClickableImage
+          <div
+            className="relative aspect-video max-w-4xl mx-auto mb-8 rounded-3xl overflow-hidden shadow-2xl cursor-zoom-in group"
+            onClick={handleFeaturedImageClick}
+          >
+            <Image
               src={imageUrl}
               alt={article.title}
               fill
-              className="object-cover"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
               priority
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
+            {/* Zoom icon on hover */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              <div className="bg-black/50 rounded-full p-4">
+                <Eye className="h-8 w-8 text-white" />
+              </div>
+            </div>
           </div>
         </ScrollReveal>
 
@@ -246,16 +263,6 @@ export function NewsDetailClient({
             dangerouslySetInnerHTML={{ __html: article.content || "" }}
           />
         </ScrollReveal>
-
-        {/* Lightbox for content images */}
-        {lightboxImage && (
-          <ImageLightbox
-            src={lightboxImage.src}
-            alt={lightboxImage.alt}
-            isOpen={!!lightboxImage}
-            onClose={() => setLightboxImage(null)}
-          />
-        )}
 
         {/* Share & Engagement Stats */}
         <ScrollReveal delay={0.3}>
@@ -362,6 +369,14 @@ export function NewsDetailClient({
           </motion.button>
         )}
       </article>
+
+      {/* Image Lightbox */}
+      <ImageLightbox
+        src={lightboxImage?.src || ""}
+        alt={lightboxImage?.alt || ""}
+        isOpen={!!lightboxImage}
+        onClose={() => setLightboxImage(null)}
+      />
     </>
   );
 }
