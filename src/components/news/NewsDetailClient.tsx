@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { NewsCard } from "@/components/news/NewsCard";
 import { CommentSection } from "@/components/news/CommentSection";
 import { ArticleActions } from "@/components/news/ArticleActions";
+import { ClickableImage, ImageLightbox } from "@/components/ui/ImageLightbox";
 import {
   Clock,
   Eye,
@@ -58,6 +59,11 @@ export function NewsDetailClient({
 }: NewsDetailClientProps) {
   const [readProgress, setReadProgress] = useState(0);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<{
+    src: string;
+    alt: string;
+  } | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   // Get safe values
   const category = getCategory(article);
@@ -81,6 +87,32 @@ export function NewsDetailClient({
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Add click handlers to images in article content
+  useEffect(() => {
+    if (!contentRef.current) return;
+
+    const images = contentRef.current.querySelectorAll("img");
+
+    const handleImageClick = (e: Event) => {
+      const img = e.currentTarget as HTMLImageElement;
+      setLightboxImage({
+        src: img.src,
+        alt: img.alt || article.title,
+      });
+    };
+
+    images.forEach((img) => {
+      img.style.cursor = "zoom-in";
+      img.addEventListener("click", handleImageClick);
+    });
+
+    return () => {
+      images.forEach((img) => {
+        img.removeEventListener("click", handleImageClick);
+      });
+    };
+  }, [article.content, article.title]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("id-ID", {
@@ -195,24 +227,35 @@ export function NewsDetailClient({
         {/* Featured Image */}
         <ScrollReveal delay={0.1}>
           <div className="relative aspect-video max-w-4xl mx-auto mb-8 rounded-3xl overflow-hidden shadow-2xl">
-            <Image
+            <ClickableImage
               src={imageUrl}
               alt={article.title}
               fill
               className="object-cover"
               priority
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
           </div>
         </ScrollReveal>
 
         {/* Article Content */}
         <ScrollReveal delay={0.2}>
           <div
+            ref={contentRef}
             className="max-w-3xl mx-auto prose prose-lg dark:prose-invert prose-headings:font-bold prose-a:text-primary prose-img:rounded-xl"
             dangerouslySetInnerHTML={{ __html: article.content || "" }}
           />
         </ScrollReveal>
+
+        {/* Lightbox for content images */}
+        {lightboxImage && (
+          <ImageLightbox
+            src={lightboxImage.src}
+            alt={lightboxImage.alt}
+            isOpen={!!lightboxImage}
+            onClose={() => setLightboxImage(null)}
+          />
+        )}
 
         {/* Share & Engagement Stats */}
         <ScrollReveal delay={0.3}>
