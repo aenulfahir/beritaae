@@ -92,6 +92,7 @@ const navSections: NavSection[] = [
       { title: "Breaking News", href: "/admin/breaking", icon: Zap },
       { title: "Trending", href: "/admin/trending", icon: TrendingUp },
       { title: "Popular", href: "/admin/popular", icon: Flame },
+      { title: "Kelola Iklan", href: "/admin/ads", icon: Megaphone },
     ],
   },
   {

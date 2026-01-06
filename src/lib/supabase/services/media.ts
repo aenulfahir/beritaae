@@ -133,41 +133,78 @@ export async function uploadMediaFile(
   file: File,
   folder?: string
 ): Promise<MediaFile | null> {
-  const supabase = getSupabase();
+  try {
+    const supabase = getSupabase();
 
-  const fileExt = file.name.split(".").pop();
-  const timestamp = Date.now();
-  const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-  const fileName = folder
-    ? `${folder}/${timestamp}-${sanitizedName}`
-    : `${timestamp}-${sanitizedName}`;
+    // Check if user is authenticated
+    const {
+      data: { session },
+      error: authError,
+    } = await supabase.auth.getSession();
+    if (authError) {
+      console.error("Auth error:", authError);
+      throw new Error("Gagal memverifikasi autentikasi");
+    }
+    if (!session) {
+      console.error("No session found - user not authenticated");
+      throw new Error("Anda harus login untuk mengupload file");
+    }
 
-  const { data, error } = await supabase.storage
-    .from("media")
-    .upload(fileName, file, {
-      cacheControl: "3600",
-      upsert: false,
-    });
+    const timestamp = Date.now();
+    const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const fileName = folder
+      ? `${folder}/${timestamp}-${sanitizedName}`
+      : `${timestamp}-${sanitizedName}`;
 
-  if (error) {
-    console.error("Error uploading media file:", error);
-    return null;
+    console.log(
+      "Uploading file:",
+      fileName,
+      "Size:",
+      file.size,
+      "Type:",
+      file.type
+    );
+
+    const { data, error } = await supabase.storage
+      .from("media")
+      .upload(fileName, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+    if (error) {
+      console.error("Storage upload error:", error);
+      throw new Error(`Upload gagal: ${error.message}`);
+    }
+
+    if (!data) {
+      throw new Error("Upload berhasil tapi tidak ada data yang dikembalikan");
+    }
+
+    const publicUrl = getMediaPublicUrl("media", data.path);
+    const fileType = getFileType(file.name, file.type);
+
+    console.log("Upload successful:", publicUrl);
+
+    return {
+      id: data.id || `media-${data.path}`,
+      name: file.name,
+      type: fileType,
+      size: file.size,
+      url: publicUrl,
+      bucket: "media",
+      path: data.path,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  } catch (err) {
+    console.error("uploadMediaFile error:", err);
+    // Re-throw with more context
+    if (err instanceof Error) {
+      throw err;
+    }
+    throw new Error("Terjadi kesalahan saat mengupload file");
   }
-
-  const publicUrl = getMediaPublicUrl("media", data.path);
-  const fileType = getFileType(file.name, file.type);
-
-  return {
-    id: data.id || `media-${data.path}`,
-    name: file.name,
-    type: fileType,
-    size: file.size,
-    url: publicUrl,
-    bucket: "media",
-    path: data.path,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
 }
 
 // Delete media file

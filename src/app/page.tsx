@@ -4,6 +4,7 @@ import {
   StaggerItem,
 } from "@/components/animations/ScrollReveal";
 import { NewsCard } from "@/components/news/NewsCard";
+import { HomepageSponsorAd, PopupAd } from "@/components/ads";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -153,6 +154,9 @@ export default async function HomePage() {
 
   return (
     <div className="bg-gradient-to-b from-muted/50 via-background to-muted/30 min-h-screen">
+      {/* Popup Ad - Shows once per session */}
+      <PopupAd />
+
       {/* Main Content Area */}
       <div className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -430,6 +434,9 @@ export default async function HomePage() {
                 </div>
               </div>
             </ScrollReveal>
+
+            {/* Homepage Sponsor Ad */}
+            <HomepageSponsorAd />
 
             {/* Category Grid - 2 columns */}
             <ScrollReveal>
