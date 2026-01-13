@@ -5,18 +5,8 @@ import { Database } from "@/types/supabase";
 let browserClient: ReturnType<typeof createBrowserClient<Database>> | null =
   null;
 
-// Check if we're in build/prerender phase (no env vars available)
-const isBuildTime = () => {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  return !supabaseUrl || !supabaseKey;
-};
-
 export function createClient() {
-  // Return existing client if available
+  // Return existing client if available (singleton pattern)
   if (browserClient) {
     return browserClient;
   }
@@ -40,7 +30,13 @@ export function createClient() {
     return createMockBrowserClient();
   }
 
-  browserClient = createBrowserClient<Database>(supabaseUrl, supabaseKey);
+  browserClient = createBrowserClient<Database>(supabaseUrl, supabaseKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  });
   return browserClient;
 }
 

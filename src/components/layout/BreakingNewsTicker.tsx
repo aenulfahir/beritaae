@@ -107,8 +107,13 @@ export function BreakingNewsTicker() {
     };
   }, []);
 
-  // Don't render if no breaking news or still loading
-  if (isLoading || hasError || breakingItems.length === 0) {
+  // Don't render if still loading
+  if (isLoading) {
+    return null;
+  }
+
+  // Don't render if error or no breaking news
+  if (hasError || breakingItems.length === 0) {
     return null;
   }
 

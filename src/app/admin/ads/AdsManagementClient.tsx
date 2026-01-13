@@ -55,7 +55,9 @@ import {
   Ad,
   AdWithStats,
   AdSlotType,
+  AdDisplayMode,
   AD_SLOT_CONFIGS,
+  AD_SIZE_PRESETS,
   AdCreateInput,
 } from "@/types/ads";
 import {
@@ -96,6 +98,9 @@ export default function AdsManagementClient() {
       .toISOString()
       .split("T")[0],
     is_active: true,
+    display_mode: "auto",
+    display_width: null,
+    display_height: null,
   });
 
   // Load ads
@@ -121,6 +126,9 @@ export default function AdsManagementClient() {
         .toISOString()
         .split("T")[0],
       is_active: true,
+      display_mode: "auto",
+      display_width: null,
+      display_height: null,
     });
     setCompressedFileSize(null);
   };
@@ -161,6 +169,9 @@ export default function AdsManagementClient() {
       start_date: new Date(ad.start_date).toISOString().split("T")[0],
       end_date: new Date(ad.end_date).toISOString().split("T")[0],
       is_active: ad.is_active,
+      display_mode: ad.display_mode || "auto",
+      display_width: ad.display_width,
+      display_height: ad.display_height,
     });
     setIsDialogOpen(true);
   };
@@ -513,6 +524,14 @@ export default function AdsManagementClient() {
                           {formatDate(ad.start_date)} -{" "}
                           {formatDate(ad.end_date)}
                         </span>
+                        {ad.display_mode !== "auto" &&
+                          ad.display_width &&
+                          ad.display_height && (
+                            <span className="text-primary">
+                              {ad.display_width}x{ad.display_height}px
+                              {ad.display_mode === "responsive" && " (max)"}
+                            </span>
+                          )}
                       </div>
 
                       <div className="flex items-center gap-4 mt-2 text-xs">
@@ -732,6 +751,158 @@ export default function AdsManagementClient() {
                   }
                 />
               </div>
+            </div>
+
+            {/* Display Size Settings */}
+            <div className="space-y-3 p-3 rounded-lg border bg-muted/30">
+              <Label className="text-sm font-medium">
+                Pengaturan Ukuran Tampilan
+              </Label>
+
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">
+                  Mode Tampilan
+                </Label>
+                <Select
+                  value={formData.display_mode || "auto"}
+                  onValueChange={(v) => {
+                    const mode = v as AdDisplayMode;
+                    if (mode === "auto") {
+                      setFormData({
+                        ...formData,
+                        display_mode: mode,
+                        display_width: null,
+                        display_height: null,
+                      });
+                    } else {
+                      // Set default preset when switching to fixed/responsive
+                      const presets = AD_SIZE_PRESETS[formData.slot_type];
+                      const defaultPreset = presets[0];
+                      setFormData({
+                        ...formData,
+                        display_mode: mode,
+                        display_width: defaultPreset?.width || null,
+                        display_height: defaultPreset?.height || null,
+                      });
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">
+                      <div>
+                        <div className="font-medium">Otomatis</div>
+                        <div className="text-xs text-muted-foreground">
+                          Gunakan ukuran default slot
+                        </div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="fixed">
+                      <div>
+                        <div className="font-medium">Ukuran Tetap</div>
+                        <div className="text-xs text-muted-foreground">
+                          Ukuran custom yang tepat
+                        </div>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="responsive">
+                      <div>
+                        <div className="font-medium">Responsif</div>
+                        <div className="text-xs text-muted-foreground">
+                          Skalakan dalam batas maksimum
+                        </div>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {formData.display_mode !== "auto" && (
+                <>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">
+                      Preset Ukuran
+                    </Label>
+                    <Select
+                      value={`${formData.display_width}x${formData.display_height}`}
+                      onValueChange={(v) => {
+                        const [w, h] = v.split("x").map(Number);
+                        setFormData({
+                          ...formData,
+                          display_width: w,
+                          display_height: h,
+                        });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih preset" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {AD_SIZE_PRESETS[formData.slot_type]?.map((preset) => (
+                          <SelectItem
+                            key={preset.label}
+                            value={`${preset.width}x${preset.height}`}
+                          >
+                            {preset.label}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="custom">Custom...</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">
+                        Lebar (px)
+                      </Label>
+                      <Input
+                        type="number"
+                        min={100}
+                        max={1200}
+                        value={formData.display_width || ""}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            display_width: parseInt(e.target.value) || null,
+                          })
+                        }
+                        placeholder="Contoh: 500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">
+                        Tinggi (px)
+                      </Label>
+                      <Input
+                        type="number"
+                        min={50}
+                        max={800}
+                        value={formData.display_height || ""}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            display_height: parseInt(e.target.value) || null,
+                          })
+                        }
+                        placeholder="Contoh: 400"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Preview */}
+                  {formData.display_width && formData.display_height && (
+                    <div className="text-xs text-muted-foreground flex items-center gap-2">
+                      <Eye className="h-3 w-3" />
+                      Preview: {formData.display_width}x
+                      {formData.display_height}px
+                      {formData.display_mode === "responsive" && " (max)"}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
           <DialogFooter>

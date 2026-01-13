@@ -14,6 +14,10 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const POPUP_SESSION_KEY = "popup_ad_shown";
 
+// Default dimensions for popup
+const DEFAULT_POPUP_WIDTH = 500;
+const DEFAULT_POPUP_HEIGHT = 400;
+
 // Fallback ad jika tidak ada di database
 const FALLBACK_AD: Ad = {
   id: "fallback-popup",
@@ -27,9 +31,20 @@ const FALLBACK_AD: Ad = {
   end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
   impressions: 0,
   clicks: 0,
+  display_width: null,
+  display_height: null,
+  display_mode: "auto",
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
+
+// Get display dimensions based on ad settings
+function getDisplayDimensions(ad: Ad): { width: number; height: number } {
+  if (ad.display_mode === "auto" || !ad.display_width || !ad.display_height) {
+    return { width: DEFAULT_POPUP_WIDTH, height: DEFAULT_POPUP_HEIGHT };
+  }
+  return { width: ad.display_width, height: ad.display_height };
+}
 
 export function PopupAd() {
   const [ad, setAd] = useState<Ad | null>(null);
@@ -88,6 +103,9 @@ export function PopupAd() {
 
   if (isLoading || !ad) return null;
 
+  const dimensions = getDisplayDimensions(ad);
+  const isResponsive = ad.display_mode === "responsive";
+
   return (
     <AnimatePresence>
       {isVisible && (
@@ -125,7 +143,11 @@ export function PopupAd() {
             className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none"
           >
             <motion.div
-              className="relative max-w-md w-full bg-background rounded-2xl shadow-2xl overflow-hidden pointer-events-auto"
+              className="relative bg-background rounded-2xl shadow-2xl overflow-hidden pointer-events-auto"
+              style={{
+                width: isResponsive ? "100%" : dimensions.width,
+                maxWidth: dimensions.width,
+              }}
               whileHover={{ scale: 1.02 }}
               transition={{ type: "spring", stiffness: 400 }}
             >
@@ -165,7 +187,10 @@ export function PopupAd() {
               <div className="relative cursor-pointer" onClick={handleClick}>
                 {/* Image */}
                 <motion.div
-                  className="relative aspect-[4/3] w-full overflow-hidden"
+                  className="relative w-full overflow-hidden"
+                  style={{
+                    aspectRatio: `${dimensions.width}/${dimensions.height}`,
+                  }}
                   whileHover={{ scale: 1.05 }}
                   transition={{ duration: 0.3 }}
                 >

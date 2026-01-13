@@ -48,6 +48,9 @@ export const AD_SLOT_DIMENSIONS: Record<AdSlotType, SlotDimension[]> = {
   ],
 };
 
+// Display mode for ad sizing
+export type AdDisplayMode = "auto" | "fixed" | "responsive";
+
 // Ad interface matching database schema
 export interface Ad {
   id: string;
@@ -60,6 +63,9 @@ export interface Ad {
   end_date: string;
   impressions: number;
   clicks: number;
+  display_width: number | null;
+  display_height: number | null;
+  display_mode: AdDisplayMode;
   created_at: string;
   updated_at: string;
 }
@@ -73,6 +79,9 @@ export interface AdCreateInput {
   start_date: string;
   end_date: string;
   is_active?: boolean;
+  display_width?: number | null;
+  display_height?: number | null;
+  display_mode?: AdDisplayMode;
 }
 
 // Input for updating ad
@@ -84,7 +93,42 @@ export interface AdUpdateInput {
   start_date?: string;
   end_date?: string;
   is_active?: boolean;
+  display_width?: number | null;
+  display_height?: number | null;
+  display_mode?: AdDisplayMode;
 }
+
+// Preset size options for each slot type
+export interface SizePreset {
+  label: string;
+  width: number;
+  height: number;
+}
+
+// Preset sizes for flexible configuration
+export const AD_SIZE_PRESETS: Record<AdSlotType, SizePreset[]> = {
+  popup: [
+    { label: "Kecil (400x320)", width: 400, height: 320 },
+    { label: "Sedang (500x400)", width: 500, height: 400 },
+    { label: "Besar (600x480)", width: 600, height: 480 },
+    { label: "Lebar (700x400)", width: 700, height: 400 },
+  ],
+  homepage_hero: [
+    { label: "Leaderboard (728x90)", width: 728, height: 90 },
+    { label: "Billboard (970x250)", width: 970, height: 250 },
+    { label: "Large Banner (970x90)", width: 970, height: 90 },
+  ],
+  in_article: [
+    { label: "Medium Rectangle (300x250)", width: 300, height: 250 },
+    { label: "Large Rectangle (336x280)", width: 336, height: 280 },
+    { label: "Half Page (300x600)", width: 300, height: 600 },
+  ],
+  post_article: [
+    { label: "Leaderboard (728x90)", width: 728, height: 90 },
+    { label: "Large Leaderboard (970x90)", width: 970, height: 90 },
+    { label: "Billboard (970x250)", width: 970, height: 250 },
+  ],
+};
 
 // Ad with calculated CTR for admin display
 export interface AdWithStats extends Ad {

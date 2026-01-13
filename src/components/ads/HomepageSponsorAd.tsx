@@ -15,6 +15,10 @@ interface HomepageSponsorAdProps {
   className?: string;
 }
 
+// Default dimensions
+const DEFAULT_DESKTOP_HEIGHT = 128; // h-32
+const DEFAULT_MOBILE_HEIGHT = 96; // h-24
+
 export function HomepageSponsorAd({ className }: HomepageSponsorAdProps) {
   const [ad, setAd] = useState<Ad | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,6 +51,18 @@ export function HomepageSponsorAd({ className }: HomepageSponsorAdProps) {
     }
   }, [ad]);
 
+  // Get display dimensions
+  const getDisplayHeight = (isMobile: boolean): number => {
+    if (!ad || ad.display_mode === "auto" || !ad.display_height) {
+      return isMobile ? DEFAULT_MOBILE_HEIGHT : DEFAULT_DESKTOP_HEIGHT;
+    }
+    // For mobile, scale down proportionally
+    if (isMobile && ad.display_height > 100) {
+      return Math.round(ad.display_height * 0.75);
+    }
+    return ad.display_height;
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -61,6 +77,9 @@ export function HomepageSponsorAd({ className }: HomepageSponsorAdProps) {
     return null;
   }
 
+  const desktopHeight = getDisplayHeight(false);
+  const mobileHeight = getDisplayHeight(true);
+
   return (
     <div className={cn("w-full", className)}>
       <div
@@ -74,7 +93,10 @@ export function HomepageSponsorAd({ className }: HomepageSponsorAdProps) {
         </div>
 
         {/* Desktop: Larger banner */}
-        <div className="hidden md:block relative h-32 w-full">
+        <div
+          className="hidden md:block relative w-full"
+          style={{ height: desktopHeight }}
+        >
           <Image
             src={ad.image_url}
             alt={ad.title}
@@ -87,7 +109,10 @@ export function HomepageSponsorAd({ className }: HomepageSponsorAdProps) {
         </div>
 
         {/* Mobile: Smaller banner */}
-        <div className="md:hidden relative h-24 w-full">
+        <div
+          className="md:hidden relative w-full"
+          style={{ height: mobileHeight }}
+        >
           <Image
             src={ad.image_url}
             alt={ad.title}

@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { MainLayoutWrapper } from "@/components/layout/MainLayoutWrapper";
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import { NavigationProgressProvider } from "@/components/providers/NavigationProgressProvider";
 import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({
@@ -79,6 +80,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <NavigationProgressProvider />
           <AuthProvider>
             <MainLayoutWrapper>{children}</MainLayoutWrapper>
           </AuthProvider>

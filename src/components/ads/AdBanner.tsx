@@ -20,8 +20,8 @@ interface AdBannerProps {
 export function AdBanner({
   slotType,
   className,
-  width = 300,
-  height = 250,
+  width: defaultWidth = 300,
+  height: defaultHeight = 250,
 }: AdBannerProps) {
   const [ad, setAd] = useState<Ad | null>(null);
   const [loading, setLoading] = useState(true);
@@ -55,12 +55,25 @@ export function AdBanner({
     }
   }, [ad]);
 
+  // Get display dimensions from ad settings or use defaults
+  const getDisplayDimensions = (): { width: number; height: number } => {
+    if (
+      !ad ||
+      ad.display_mode === "auto" ||
+      !ad.display_width ||
+      !ad.display_height
+    ) {
+      return { width: defaultWidth, height: defaultHeight };
+    }
+    return { width: ad.display_width, height: ad.display_height };
+  };
+
   // Loading state
   if (loading) {
     return (
       <div
         className={cn("animate-pulse bg-muted rounded-lg", className)}
-        style={{ width, height }}
+        style={{ width: defaultWidth, height: defaultHeight }}
       />
     );
   }
@@ -70,6 +83,9 @@ export function AdBanner({
     return null;
   }
 
+  const dimensions = getDisplayDimensions();
+  const isResponsive = ad.display_mode === "responsive";
+
   return (
     <div
       className={cn(
@@ -77,14 +93,22 @@ export function AdBanner({
         className
       )}
       onClick={handleClick}
+      style={isResponsive ? { maxWidth: dimensions.width } : undefined}
     >
-      <div className="relative" style={{ width, height }}>
+      <div
+        className="relative"
+        style={{
+          width: isResponsive ? "100%" : dimensions.width,
+          height: dimensions.height,
+          maxWidth: dimensions.width,
+        }}
+      >
         <Image
           src={ad.image_url}
           alt={ad.title}
           fill
           className="object-cover transition-transform duration-300 group-hover:scale-105"
-          sizes={`${width}px`}
+          sizes={`${dimensions.width}px`}
         />
         {/* Hover overlay */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />

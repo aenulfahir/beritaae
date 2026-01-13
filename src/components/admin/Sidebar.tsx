@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +40,11 @@ import {
   HelpCircle,
 } from "lucide-react";
 
+interface SidebarStats {
+  articlesCount: number;
+  pendingCommentsCount: number;
+}
+
 interface NavItem {
   title: string;
   href: string;
@@ -58,90 +63,122 @@ interface NavSection {
   items: NavItem[];
 }
 
-const navSections: NavSection[] = [
-  {
-    label: "Utama",
-    items: [
-      { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
-      { title: "Analitik", href: "/admin/analytics", icon: BarChart3 },
-    ],
-  },
-  {
-    label: "Konten",
-    items: [
-      {
-        title: "Artikel",
-        href: "/admin/articles",
-        icon: Newspaper,
-        badge: "24",
-      },
-      { title: "Kategori", href: "/admin/categories", icon: FolderOpen },
-      {
-        title: "Komentar",
-        href: "/admin/comments",
-        icon: MessageSquare,
-        badge: "5",
-        badgeVariant: "destructive",
-      },
-      { title: "Media", href: "/admin/media", icon: Image },
-    ],
-  },
-  {
-    label: "Kurasi",
-    items: [
-      { title: "Breaking News", href: "/admin/breaking", icon: Zap },
-      { title: "Trending", href: "/admin/trending", icon: TrendingUp },
-      { title: "Popular", href: "/admin/popular", icon: Flame },
-      { title: "Kelola Iklan", href: "/admin/ads", icon: Megaphone },
-    ],
-  },
-  {
-    label: "Kelola",
-    items: [
-      {
-        title: "Pengguna",
-        href: "/admin/users",
-        icon: Users,
-        children: [
-          { title: "Admin", href: "/admin/users/admins", icon: UserCog },
-          { title: "Penulis", href: "/admin/users/authors", icon: User },
-          { title: "Member", href: "/admin/users/members", icon: Users },
-        ],
-      },
-      {
-        title: "Perusahaan",
-        href: "/admin/company",
-        icon: Building2,
-        children: [
-          { title: "Tentang", href: "/admin/company/about", icon: FileText },
-          { title: "Tim", href: "/admin/company/team", icon: Users },
-          { title: "Karir", href: "/admin/company/careers", icon: Briefcase },
-          { title: "Iklan", href: "/admin/company/ads", icon: Megaphone },
-        ],
-      },
-      {
-        title: "Pengaturan",
-        href: "/admin/settings",
-        icon: Settings,
-        children: [
-          {
-            title: "Branding",
-            href: "/admin/settings/branding",
-            icon: Palette,
-          },
-          { title: "Kontak", href: "/admin/settings/contact", icon: Phone },
-          { title: "Social", href: "/admin/settings/social", icon: Share2 },
-          { title: "Legal", href: "/admin/settings/legal", icon: Scale },
-        ],
-      },
-    ],
-  },
-];
+function createNavSections(stats: SidebarStats): NavSection[] {
+  return [
+    {
+      label: "Utama",
+      items: [
+        { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
+        { title: "Analitik", href: "/admin/analytics", icon: BarChart3 },
+      ],
+    },
+    {
+      label: "Konten",
+      items: [
+        {
+          title: "Artikel",
+          href: "/admin/articles",
+          icon: Newspaper,
+          badge: stats.articlesCount > 0 ? stats.articlesCount : undefined,
+        },
+        { title: "Kategori", href: "/admin/categories", icon: FolderOpen },
+        {
+          title: "Komentar",
+          href: "/admin/comments",
+          icon: MessageSquare,
+          badge:
+            stats.pendingCommentsCount > 0
+              ? stats.pendingCommentsCount
+              : undefined,
+          badgeVariant:
+            stats.pendingCommentsCount > 0 ? "destructive" : undefined,
+        },
+        { title: "Media", href: "/admin/media", icon: Image },
+      ],
+    },
+    {
+      label: "Kurasi",
+      items: [
+        { title: "Breaking News", href: "/admin/breaking", icon: Zap },
+        { title: "Trending", href: "/admin/trending", icon: TrendingUp },
+        { title: "Popular", href: "/admin/popular", icon: Flame },
+        { title: "Kelola Iklan", href: "/admin/ads", icon: Megaphone },
+      ],
+    },
+    {
+      label: "Kelola",
+      items: [
+        {
+          title: "Pengguna",
+          href: "/admin/users",
+          icon: Users,
+          children: [
+            { title: "Admin", href: "/admin/users/admins", icon: UserCog },
+            { title: "Penulis", href: "/admin/users/authors", icon: User },
+            { title: "Member", href: "/admin/users/members", icon: Users },
+          ],
+        },
+        {
+          title: "Perusahaan",
+          href: "/admin/company",
+          icon: Building2,
+          children: [
+            { title: "Tentang", href: "/admin/company/about", icon: FileText },
+            { title: "Tim", href: "/admin/company/team", icon: Users },
+            { title: "Karir", href: "/admin/company/careers", icon: Briefcase },
+            { title: "Iklan", href: "/admin/company/ads", icon: Megaphone },
+          ],
+        },
+        {
+          title: "Pengaturan",
+          href: "/admin/settings",
+          icon: Settings,
+          children: [
+            {
+              title: "Branding",
+              href: "/admin/settings/branding",
+              icon: Palette,
+            },
+            { title: "Kontak", href: "/admin/settings/contact", icon: Phone },
+            { title: "Social", href: "/admin/settings/social", icon: Share2 },
+            { title: "Legal", href: "/admin/settings/legal", icon: Scale },
+          ],
+        },
+      ],
+    },
+  ];
+}
 
 export function AdminSidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const [stats, setStats] = useState<SidebarStats>({
+    articlesCount: 0,
+    pendingCommentsCount: 0,
+  });
+
+  // Fetch sidebar stats
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/sidebar-stats");
+      if (res.ok) {
+        const data = await res.json();
+        setStats(data);
+      }
+    } catch (error) {
+      console.error("Error fetching sidebar stats:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStats();
+    // Refresh stats every 30 seconds
+    const interval = setInterval(fetchStats, 30000);
+    return () => clearInterval(interval);
+  }, [fetchStats]);
+
+  const navSections = createNavSections(stats);
 
   useEffect(() => {
     // Auto-expand active parent items
@@ -157,7 +194,8 @@ export function AdminSidebar() {
         }
       });
     });
-  }, [pathname]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, navSections]);
 
   const toggleExpanded = (title: string) => {
     setExpandedItems((prev) =>

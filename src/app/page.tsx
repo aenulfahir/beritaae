@@ -14,6 +14,7 @@ import {
   ChevronRight,
   ArrowRight,
   Sparkles,
+  MessageCircle,
 } from "lucide-react";
 import { Flame } from "lucide-react";
 import {
@@ -25,6 +26,7 @@ import {
 } from "@/lib/supabase/services/articles-server";
 import { getCategories } from "@/lib/supabase/services/categories-server";
 import { getTrendingTagsServer } from "@/lib/supabase/services/tags-server";
+import { getMostCommentedArticles } from "@/lib/supabase/services/sidebar-stats";
 import { NewsArticle } from "@/types";
 
 // Force dynamic rendering for this page
@@ -89,6 +91,7 @@ function CategorySection({
                     alt={article.title}
                     fill
                     className="object-cover"
+                    sizes="56px"
                   />
                 </div>
               )}
@@ -128,6 +131,7 @@ export default async function HomePage() {
     teknologiArticles,
     olahragaArticles,
     hiburanArticles,
+    mostCommentedArticles,
   ] = await Promise.all([
     getPublishedArticles({ limit: 20 }),
     getFeaturedArticles(),
@@ -140,6 +144,7 @@ export default async function HomePage() {
     getArticlesByCategory("teknologi", 3),
     getArticlesByCategory("olahraga", 3),
     getArticlesByCategory("hiburan", 3),
+    getMostCommentedArticles(5),
   ]);
 
   const featured = featuredArticles[0] || allArticles[0];
@@ -255,6 +260,7 @@ export default async function HomePage() {
                           fill
                           className="object-cover transition-transform duration-700 group-hover:scale-105"
                           priority
+                          sizes="(max-width: 768px) 100vw, 66vw"
                         />
                         {/* Gradient overlays */}
                         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
@@ -327,6 +333,7 @@ export default async function HomePage() {
                             alt={sideNews[0].title}
                             fill
                             className="object-cover transition-transform duration-500 group-hover:scale-110"
+                            sizes="(max-width: 768px) 100vw, 33vw"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                           <div className="absolute inset-0 p-4 flex flex-col justify-end">
@@ -357,6 +364,7 @@ export default async function HomePage() {
                             alt={sideNews[1].title}
                             fill
                             className="object-cover transition-transform duration-500 group-hover:scale-110"
+                            sizes="(max-width: 768px) 100vw, 33vw"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                           <div className="absolute inset-0 p-4 flex flex-col justify-end">
@@ -392,6 +400,7 @@ export default async function HomePage() {
                             alt={article.title}
                             fill
                             className="object-cover transition-transform duration-500 group-hover:scale-110"
+                            sizes="(max-width: 640px) 100vw, 33vw"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
                           <div className="absolute inset-0 p-3 flex flex-col justify-end">
@@ -540,6 +549,7 @@ export default async function HomePage() {
                             alt={article.title}
                             fill
                             className="object-cover"
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                           />
                         </div>
                         <h4 className="font-medium text-xs line-clamp-2 leading-snug">
@@ -581,7 +591,7 @@ export default async function HomePage() {
                           </h4>
                           <span className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
                             <Eye className="h-2.5 w-2.5" />
-                            {article.views_count.toLocaleString()}
+                            {article.views_count.toLocaleString()} views
                           </span>
                         </div>
                       </Link>
@@ -590,8 +600,44 @@ export default async function HomePage() {
                 </div>
               </ScrollReveal>
 
+              {/* Most Commented - Real Data */}
+              {mostCommentedArticles.length > 0 && (
+                <ScrollReveal delay={0.1}>
+                  <div className="bg-background rounded-2xl shadow-lg border border-border/50 overflow-hidden">
+                    <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-3">
+                      <h3 className="text-xs font-bold flex items-center gap-2 text-white">
+                        <MessageCircle className="h-3.5 w-3.5" />
+                        Paling Banyak Dikomentari
+                      </h3>
+                    </div>
+                    <div className="p-3 space-y-0.5">
+                      {mostCommentedArticles.map((article, index) => (
+                        <Link
+                          key={article.id}
+                          href={`/news/${article.slug}`}
+                          className="flex gap-2.5 p-2 rounded-xl hover:bg-accent/50 transition-all duration-200 group"
+                        >
+                          <span className="text-xl font-black bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 bg-clip-text text-transparent group-hover:from-emerald-500/40 group-hover:to-emerald-500/20 transition-all w-6 shrink-0">
+                            {String(index + 1).padStart(2, "0")}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-xs font-medium line-clamp-2 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors leading-snug">
+                              {article.title}
+                            </h4>
+                            <span className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                              <MessageCircle className="h-2.5 w-2.5" />
+                              {article.comment_count} komentar
+                            </span>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </ScrollReveal>
+              )}
+
               {/* Newsletter CTA */}
-              <ScrollReveal delay={0.1}>
+              <ScrollReveal delay={0.2}>
                 <div className="bg-gradient-to-br from-primary via-primary to-primary/80 rounded-2xl p-4 text-primary-foreground relative overflow-hidden">
                   <div className="absolute -top-10 -right-10 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
                   <div className="absolute -bottom-10 -left-10 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
@@ -617,7 +663,7 @@ export default async function HomePage() {
               </ScrollReveal>
 
               {/* Quick Links */}
-              <ScrollReveal delay={0.2}>
+              <ScrollReveal delay={0.3}>
                 <div className="bg-background/80 backdrop-blur-sm rounded-2xl p-3 border border-border/50">
                   <h3 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
                     Baca Juga

@@ -88,7 +88,19 @@ export async function getArticleComments(
 ): Promise<Comment[]> {
   try {
     const supabase = getSupabase();
-    const { data, error } = await supabase
+
+    // Add timeout to prevent infinite loading
+    const timeoutPromise = new Promise<{
+      data: null;
+      error: { message: string };
+    }>((_, reject) =>
+      setTimeout(
+        () => reject({ data: null, error: { message: "Request timeout" } }),
+        10000
+      )
+    );
+
+    const queryPromise = supabase
       .from("comments")
       .select(
         `
@@ -98,6 +110,11 @@ export async function getArticleComments(
       )
       .eq("article_id", articleId)
       .order("created_at", { ascending: true });
+
+    const { data, error } = (await Promise.race([
+      queryPromise,
+      timeoutPromise,
+    ])) as { data: any; error: any };
 
     if (error) {
       // Silently handle error if table doesn't exist yet or RLS blocks access
@@ -115,8 +132,8 @@ export async function getArticleComments(
       return [];
     }
 
-    const comments = (data || []).map((row) =>
-      transformComment(row as Record<string, unknown>)
+    const comments = (data || []).map((row: Record<string, unknown>) =>
+      transformComment(row)
     );
     return buildCommentTree(comments);
   } catch (err) {
@@ -373,7 +390,8 @@ export function subscribeToComments(
   }) => void
 ): RealtimeChannel {
   const supabase = getSupabase();
-  return supabase
+
+  const channel = supabase
     .channel(`comments:${articleId}`)
     .on(
       "postgres_changes",
@@ -384,34 +402,44 @@ export function subscribeToComments(
         filter: `article_id=eq.${articleId}`,
       },
       async (payload) => {
-        let newComment: Comment | null = null;
-        let oldComment: Comment | null = null;
+        try {
+          let newComment: Comment | null = null;
+          let oldComment: Comment | null = null;
 
-        if (payload.new && Object.keys(payload.new).length > 0) {
-          // Fetch the full comment with profile
-          const { data } = await supabase
-            .from("comments")
-            .select(`*, profiles:user_id (*)`)
-            .eq("id", (payload.new as Record<string, unknown>).id as string)
-            .single();
+          if (payload.new && Object.keys(payload.new).length > 0) {
+            // Fetch the full comment with profile
+            const { data } = await supabase
+              .from("comments")
+              .select(`*, profiles:user_id (*)`)
+              .eq("id", (payload.new as Record<string, unknown>).id as string)
+              .single();
 
-          if (data) {
-            newComment = transformComment(data as Record<string, unknown>);
+            if (data) {
+              newComment = transformComment(data as Record<string, unknown>);
+            }
           }
-        }
 
-        if (payload.old && Object.keys(payload.old).length > 0) {
-          oldComment = payload.old as Comment;
-        }
+          if (payload.old && Object.keys(payload.old).length > 0) {
+            oldComment = payload.old as Comment;
+          }
 
-        callback({
-          eventType: payload.eventType,
-          new: newComment,
-          old: oldComment,
-        });
+          callback({
+            eventType: payload.eventType,
+            new: newComment,
+            old: oldComment,
+          });
+        } catch (error) {
+          console.error("Error processing realtime comment:", error);
+        }
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      if (status === "CHANNEL_ERROR") {
+        console.error("Realtime channel error for comments");
+      }
+    });
+
+  return channel;
 }
 
 // Admin functions

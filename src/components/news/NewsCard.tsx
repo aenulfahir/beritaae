@@ -85,6 +85,7 @@ function DefaultCard({
               alt={article.title}
               fill
               className="object-cover transition-transform duration-700 group-hover:scale-110"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             />
             {/* Gradient Overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-60 group-hover:opacity-40 transition-opacity duration-300" />
@@ -198,6 +199,7 @@ function FeaturedCard({ article }: { article: NewsArticle }) {
             fill
             className="object-cover transition-transform duration-1000 group-hover:scale-105"
             priority
+            sizes="(max-width: 768px) 100vw, 66vw"
           />
 
           {/* Multi-layer gradient */}
@@ -286,6 +288,7 @@ function CompactCard({ article }: { article: NewsArticle }) {
               alt={article.title}
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-110"
+              sizes="64px"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
@@ -331,6 +334,7 @@ function HorizontalCard({ article }: { article: NewsArticle }) {
               alt={article.title}
               fill
               className="object-cover transition-transform duration-500 group-hover:scale-110"
+              sizes="96px"
             />
             {/* Breaking indicator on image */}
             {article.is_breaking && (

@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -32,6 +31,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { SearchDialog } from "@/components/search";
 
 interface AdminUser {
   id: string;
@@ -56,6 +56,7 @@ export function AdminHeader() {
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [notificationCount, setNotificationCount] = useState(0);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -65,6 +66,19 @@ export function AdminHeader() {
     fetchHeaderData();
 
     return () => clearInterval(timer);
+  }, []);
+
+  // Keyboard shortcut for search (Ctrl+K / Cmd+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   const fetchHeaderData = async () => {
@@ -147,16 +161,17 @@ export function AdminHeader() {
           </div>
 
           {/* Search */}
-          <div className="relative w-72 hidden md:block">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Cari artikel, kategori..."
-              className="pl-9 pr-12 h-9 bg-muted/50 border-0 focus-visible:ring-1"
-            />
-            <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            className="relative w-72 hidden md:flex items-center gap-2 px-3 h-9 bg-muted/50 hover:bg-muted rounded-md text-sm text-muted-foreground transition-colors"
+          >
+            <Search className="h-4 w-4" />
+            <span className="flex-1 text-left">Cari artikel, kategori...</span>
+            <kbd className="flex items-center gap-0.5 px-1.5 h-5 bg-background rounded border text-[10px] font-mono">
               <Command className="h-3 w-3" />K
             </kbd>
-          </div>
+          </button>
         </div>
 
         {/* Right: Actions */}
@@ -326,6 +341,9 @@ export function AdminHeader() {
           </DropdownMenu>
         </div>
       </div>
+
+      {/* Search Dialog */}
+      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
     </header>
   );
 }

@@ -14,6 +14,10 @@ interface PostArticleAdProps {
   className?: string;
 }
 
+// Default dimensions
+const DEFAULT_DESKTOP_HEIGHT = 96; // h-24
+const DEFAULT_MOBILE_HEIGHT = 80; // h-20
+
 export function PostArticleAd({ className }: PostArticleAdProps) {
   const [ad, setAd] = useState<Ad | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,6 +50,18 @@ export function PostArticleAd({ className }: PostArticleAdProps) {
     }
   }, [ad]);
 
+  // Get display dimensions
+  const getDisplayHeight = (isMobile: boolean): number => {
+    if (!ad || ad.display_mode === "auto" || !ad.display_height) {
+      return isMobile ? DEFAULT_MOBILE_HEIGHT : DEFAULT_DESKTOP_HEIGHT;
+    }
+    // For mobile, scale down proportionally
+    if (isMobile && ad.display_height > 80) {
+      return Math.round(ad.display_height * 0.8);
+    }
+    return ad.display_height;
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -60,6 +76,9 @@ export function PostArticleAd({ className }: PostArticleAdProps) {
     return null;
   }
 
+  const desktopHeight = getDisplayHeight(false);
+  const mobileHeight = getDisplayHeight(true);
+
   return (
     <div className={cn("w-full max-w-3xl mx-auto my-8", className)}>
       <div className="flex flex-col items-center">
@@ -72,7 +91,10 @@ export function PostArticleAd({ className }: PostArticleAdProps) {
           onClick={handleClick}
         >
           {/* Desktop: Leaderboard */}
-          <div className="hidden md:block relative h-24 w-full">
+          <div
+            className="hidden md:block relative w-full"
+            style={{ height: desktopHeight }}
+          >
             <Image
               src={ad.image_url}
               alt={ad.title}
@@ -83,7 +105,10 @@ export function PostArticleAd({ className }: PostArticleAdProps) {
           </div>
 
           {/* Mobile: Smaller banner */}
-          <div className="md:hidden relative h-20 w-full">
+          <div
+            className="md:hidden relative w-full"
+            style={{ height: mobileHeight }}
+          >
             <Image
               src={ad.image_url}
               alt={ad.title}

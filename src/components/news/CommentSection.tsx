@@ -383,17 +383,33 @@ export function CommentSection({ articleId }: CommentSectionProps) {
 
   // Fetch comments on mount
   useEffect(() => {
+    let isMounted = true;
+
     const fetchComments = async () => {
       setIsLoading(true);
-      const data = await getArticleComments(articleId);
-      setComments(data);
-      setIsLoading(false);
+      try {
+        const data = await getArticleComments(articleId);
+        if (isMounted) {
+          setComments(data);
+        }
+      } catch (error) {
+        console.error("Error fetching comments:", error);
+        if (isMounted) {
+          setComments([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
     };
 
     fetchComments();
 
     // Subscribe to real-time updates
     const channel = subscribeToComments(articleId, (payload) => {
+      if (!isMounted) return;
+
       if (payload.eventType === "INSERT" && payload.new) {
         setComments((prev) => {
           // If it's a reply, add to parent
@@ -417,6 +433,7 @@ export function CommentSection({ articleId }: CommentSectionProps) {
     });
 
     return () => {
+      isMounted = false;
       channel.unsubscribe();
     };
   }, [articleId]);

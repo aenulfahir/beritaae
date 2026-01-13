@@ -12,7 +12,6 @@ import {
   NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
-import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,12 +34,14 @@ import {
   LogOut,
   Settings,
   UserCircle,
+  Command,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { SearchDialog } from "@/components/search";
 
 export function Header() {
   const { theme, setTheme } = useTheme();
@@ -53,6 +54,19 @@ export function Header() {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Keyboard shortcut for search (Ctrl+K / Cmd+K)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   // Parse brand name for display
@@ -105,23 +119,29 @@ export function Header() {
 
           {/* Center: Search Bar (Desktop) */}
           <div className="hidden lg:flex flex-1 max-w-md mx-4">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Cari berita, topik, atau penulis..."
-                className="pl-10 pr-4 h-9 bg-muted/50 border-0 focus-visible:ring-1"
-              />
-            </div>
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              className="relative w-full flex items-center gap-2 px-3 h-9 bg-muted/50 hover:bg-muted rounded-md text-sm text-muted-foreground transition-colors"
+            >
+              <Search className="h-4 w-4" />
+              <span className="flex-1 text-left">
+                Cari berita, topik, atau penulis...
+              </span>
+              <kbd className="hidden sm:flex items-center gap-0.5 px-1.5 h-5 bg-background rounded border text-[10px] font-mono">
+                <Command className="h-3 w-3" />K
+              </kbd>
+            </button>
           </div>
 
           {/* Right Side Actions */}
           <div className="flex items-center gap-1">
-            {/* Search Toggle (Mobile) */}
+            {/* Search Toggle (Mobile & Desktop) */}
             <Button
               variant="ghost"
               size="icon"
               className="lg:hidden h-9 w-9"
-              onClick={() => setSearchOpen(!searchOpen)}
+              onClick={() => setSearchOpen(true)}
             >
               <Search className="h-4 w-4" />
             </Button>
@@ -275,19 +295,8 @@ export function Header() {
           </div>
         </div>
 
-        {/* Mobile Search */}
-        {searchOpen && (
-          <div className="lg:hidden pb-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Cari berita..."
-                className="pl-10 pr-4 h-9 bg-muted/50 border-0"
-                autoFocus
-              />
-            </div>
-          </div>
-        )}
+        {/* Search Dialog */}
+        <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
       </div>
 
       {/* Navigation Bar */}

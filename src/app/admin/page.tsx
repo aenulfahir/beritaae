@@ -11,74 +11,60 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getAdminDashboardData } from "@/lib/supabase/services/admin-data";
 import {
-  Newspaper,
-  Eye,
-  MessageSquare,
-  Users,
   Plus,
   ArrowRight,
-  ArrowUpRight,
-  ArrowDownRight,
   Clock,
   Zap,
+  Eye,
+  MessageSquare,
+  TrendingUp,
+  Flame,
+  FileText,
+  FolderOpen,
+  Megaphone,
+  Settings,
 } from "lucide-react";
 import { RelativeTime } from "@/components/ui/RelativeTime";
 
-interface StatCardProps {
+interface QuickActionProps {
   title: string;
-  value: string | number;
-  change: number;
+  description: string;
+  href: string;
   icon: React.ComponentType<{ className?: string }>;
   iconColor: string;
   iconBg: string;
 }
 
-function StatCard({
+function QuickAction({
   title,
-  value,
-  change,
+  description,
+  href,
   icon: Icon,
   iconColor,
   iconBg,
-}: StatCardProps) {
-  const isPositive = change >= 0;
-
+}: QuickActionProps) {
   return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <p className="text-xs font-medium text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold">
-              {typeof value === "number" ? value.toLocaleString() : value}
-            </p>
-            <div className="flex items-center gap-1 text-xs">
-              {isPositive ? (
-                <ArrowUpRight className="h-3 w-3 text-green-500" />
-              ) : (
-                <ArrowDownRight className="h-3 w-3 text-red-500" />
-              )}
-              <span className={isPositive ? "text-green-500" : "text-red-500"}>
-                {isPositive ? "+" : ""}
-                {change}%
-              </span>
-              <span className="text-muted-foreground">vs minggu lalu</span>
-            </div>
-          </div>
+    <Link href={href}>
+      <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
+        <CardContent className="p-4 flex items-center gap-3">
           <div
-            className={`flex h-10 w-10 items-center justify-center rounded-lg ${iconBg}`}
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${iconBg}`}
           >
             <Icon className={`h-5 w-5 ${iconColor}`} />
           </div>
-        </div>
-      </CardContent>
-    </Card>
+          <div className="min-w-0">
+            <p className="text-sm font-medium">{title}</p>
+            <p className="text-xs text-muted-foreground">{description}</p>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
 
 export default async function AdminDashboard() {
   const data = await getAdminDashboardData();
-  const { stats, recentArticles, popularArticles, categoryDistribution } = data;
+  const { recentArticles, popularArticles, categoryDistribution } = data;
 
   return (
     <div className="space-y-6">
@@ -87,7 +73,7 @@ export default async function AdminDashboard() {
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <p className="text-sm text-muted-foreground">
-            Selamat datang! Berikut ringkasan portal berita Anda.
+            Selamat datang! Kelola portal berita Anda dari sini.
           </p>
         </div>
         <Link href="/admin/articles/new">
@@ -98,55 +84,55 @@ export default async function AdminDashboard() {
         </Link>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Artikel"
-          value={stats.totalArticles}
-          change={stats.articlesChange}
-          icon={Newspaper}
+      {/* Quick Actions */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <QuickAction
+          title="Tulis Artikel"
+          description="Buat artikel baru"
+          href="/admin/articles/new"
+          icon={FileText}
           iconColor="text-blue-500"
           iconBg="bg-blue-500/10"
         />
-        <StatCard
-          title="Total Views"
-          value={stats.totalViews}
-          change={stats.viewsChange}
-          icon={Eye}
+        <QuickAction
+          title="Breaking News"
+          description="Kelola berita utama"
+          href="/admin/breaking"
+          icon={Zap}
+          iconColor="text-red-500"
+          iconBg="bg-red-500/10"
+        />
+        <QuickAction
+          title="Kelola Iklan"
+          description="Atur slot iklan"
+          href="/admin/ads"
+          icon={Megaphone}
           iconColor="text-green-500"
           iconBg="bg-green-500/10"
         />
-        <StatCard
-          title="Komentar"
-          value={stats.totalComments}
-          change={stats.commentsChange}
-          icon={MessageSquare}
-          iconColor="text-orange-500"
-          iconBg="bg-orange-500/10"
-        />
-        <StatCard
-          title="Pengguna"
-          value={stats.totalUsers}
-          change={stats.usersChange}
-          icon={Users}
+        <QuickAction
+          title="Pengaturan"
+          description="Konfigurasi situs"
+          href="/admin/settings/branding"
+          icon={Settings}
           iconColor="text-purple-500"
           iconBg="bg-purple-500/10"
         />
       </div>
 
-      {/* Content Row */}
+      {/* Main Content Grid */}
       <div className="grid gap-4 lg:grid-cols-3">
-        {/* Top Articles */}
+        {/* Recent Articles - Takes 2 columns */}
         <Card className="lg:col-span-2">
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-base">Artikel Terpopuler</CardTitle>
+                <CardTitle className="text-base">Artikel Terbaru</CardTitle>
                 <CardDescription className="text-xs">
-                  Berdasarkan views
+                  Artikel yang baru dipublikasikan
                 </CardDescription>
               </div>
-              <Link href="/admin/popular">
+              <Link href="/admin/articles">
                 <Button variant="ghost" size="sm" className="text-xs gap-1">
                   Lihat Semua <ArrowRight className="h-3 w-3" />
                 </Button>
@@ -154,79 +140,176 @@ export default async function AdminDashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            {popularArticles.length > 0 ? (
+            {recentArticles.length > 0 ? (
               <div className="space-y-3">
-                {popularArticles.map((article: any, i: number) => (
-                  <div key={article.id} className="flex items-center gap-3">
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
-                      {i + 1}
-                    </span>
-                    <div className="relative h-10 w-14 shrink-0 overflow-hidden rounded">
+                {recentArticles.slice(0, 5).map((article: any) => (
+                  <div
+                    key={article.id}
+                    className="flex items-center gap-3 rounded-lg border p-2 hover:bg-accent/30 transition-colors"
+                  >
+                    <div className="relative h-14 w-20 shrink-0 overflow-hidden rounded">
                       <Image
-                        src={article.image_url}
+                        src={article.image_url || "/placeholder.jpg"}
                         alt={article.title}
                         fill
                         className="object-cover"
+                        sizes="80px"
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <Link href={`/admin/articles/${article.id}/edit`}>
-                        <p className="text-xs font-medium line-clamp-1 hover:text-primary">
-                          {article.title}
-                        </p>
+                      <Link
+                        href={`/admin/articles/${article.id}/edit`}
+                        className="text-sm font-medium hover:text-primary line-clamp-2"
+                      >
+                        {article.title}
                       </Link>
-                      <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                        <Eye className="h-3 w-3" />
-                        {article.views_count.toLocaleString()} views
-                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] h-4 px-1.5"
+                          style={{
+                            borderColor: article.category.color,
+                            color: article.category.color,
+                          }}
+                        >
+                          {article.category.name}
+                        </Badge>
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          <RelativeTime date={article.created_at} />
+                        </span>
+                        {article.is_breaking && (
+                          <Badge
+                            variant="destructive"
+                            className="text-[10px] h-4 px-1"
+                          >
+                            <Zap className="h-3 w-3 mr-0.5" />
+                            Breaking
+                          </Badge>
+                        )}
+                      </div>
                     </div>
+                    <Link href={`/admin/articles/${article.id}/edit`}>
+                      <Button variant="ghost" size="sm" className="text-xs">
+                        Edit
+                      </Button>
+                    </Link>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                Belum ada artikel
-              </p>
+              <div className="text-center py-8">
+                <p className="text-sm text-muted-foreground mb-3">
+                  Belum ada artikel
+                </p>
+                <Link href="/admin/articles/new">
+                  <Button size="sm" variant="outline" className="gap-1.5">
+                    <Plus className="h-4 w-4" />
+                    Buat Artikel Pertama
+                  </Button>
+                </Link>
+              </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Category Distribution */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Kategori</CardTitle>
-            <CardDescription className="text-xs">
-              Distribusi artikel
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {categoryDistribution.slice(0, 6).map((cat: any) => (
-                <div
-                  key={cat.name}
-                  className="flex items-center justify-between text-sm"
-                >
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="h-3 w-3 rounded-full"
-                      style={{ backgroundColor: cat.color }}
-                    />
-                    <span className="text-muted-foreground">{cat.name}</span>
+        {/* Sidebar - Category & Quick Stats */}
+        <div className="space-y-4">
+          {/* Category Distribution */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <FolderOpen className="h-4 w-4" />
+                  Kategori
+                </CardTitle>
+                <Link href="/admin/categories">
+                  <Button variant="ghost" size="sm" className="text-xs h-7">
+                    Kelola
+                  </Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {categoryDistribution.slice(0, 6).map((cat: any) => (
+                  <div
+                    key={cat.name}
+                    className="flex items-center justify-between text-sm"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: cat.color }}
+                      />
+                      <span className="text-muted-foreground text-xs">
+                        {cat.name}
+                      </span>
+                    </div>
+                    <Badge variant="secondary" className="text-[10px] h-5">
+                      {cat.value} artikel
+                    </Badge>
                   </div>
-                  <span className="font-medium">{cat.value}</span>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Links */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Kurasi Konten</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Link
+                href="/admin/trending"
+                className="flex items-center justify-between p-2 rounded-lg hover:bg-accent transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-blue-500" />
+                  <span className="text-sm">Trending</span>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              </Link>
+              <Link
+                href="/admin/popular"
+                className="flex items-center justify-between p-2 rounded-lg hover:bg-accent transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Flame className="h-4 w-4 text-orange-500" />
+                  <span className="text-sm">Popular</span>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              </Link>
+              <Link
+                href="/admin/comments"
+                className="flex items-center justify-between p-2 rounded-lg hover:bg-accent transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-green-500" />
+                  <span className="text-sm">Komentar</span>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
-      {/* Recent Articles */}
+      {/* Popular Articles */}
       <Card>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Artikel Terbaru</CardTitle>
-            <Link href="/admin/articles">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Eye className="h-4 w-4" />
+                Artikel Terpopuler
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Berdasarkan jumlah views
+              </CardDescription>
+            </div>
+            <Link href="/admin/popular">
               <Button variant="ghost" size="sm" className="text-xs gap-1">
                 Lihat Semua <ArrowRight className="h-3 w-3" />
               </Button>
@@ -234,56 +317,42 @@ export default async function AdminDashboard() {
           </div>
         </CardHeader>
         <CardContent>
-          {recentArticles.length > 0 ? (
-            <div className="space-y-3">
-              {recentArticles.map((article: any) => (
-                <div
+          {popularArticles.length > 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {popularArticles.slice(0, 5).map((article: any, i: number) => (
+                <Link
                   key={article.id}
-                  className="flex items-center gap-3 rounded-lg border p-2"
+                  href={`/admin/articles/${article.id}/edit`}
+                  className="group"
                 >
-                  <div className="relative h-12 w-16 shrink-0 overflow-hidden rounded">
+                  <div className="relative aspect-video overflow-hidden rounded-lg">
                     <Image
-                      src={article.image_url}
+                      src={article.image_url || "/placeholder.jpg"}
                       alt={article.title}
                       fill
-                      className="object-cover"
+                      className="object-cover group-hover:scale-105 transition-transform"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 20vw"
                     />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <Link
-                      href={`/admin/articles/${article.id}/edit`}
-                      className="text-xs font-medium hover:text-primary line-clamp-1"
-                    >
-                      {article.title}
-                    </Link>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                    <div className="absolute top-2 left-2">
                       <Badge
-                        variant="outline"
-                        className="text-[10px] h-4 px-1"
-                        style={{
-                          borderColor: article.category.color,
-                          color: article.category.color,
-                        }}
+                        variant="secondary"
+                        className="text-[10px] h-5 bg-black/50 text-white border-0"
                       >
-                        {article.category.name}
+                        #{i + 1}
                       </Badge>
-                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        <RelativeTime date={article.created_at} />
-                      </span>
+                    </div>
+                    <div className="absolute bottom-2 left-2 right-2">
+                      <p className="text-white text-xs font-medium line-clamp-2">
+                        {article.title}
+                      </p>
+                      <p className="text-white/70 text-[10px] flex items-center gap-1 mt-1">
+                        <Eye className="h-3 w-3" />
+                        {article.views_count.toLocaleString()}
+                      </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {article.is_breaking && (
-                      <Badge
-                        variant="destructive"
-                        className="text-[10px] h-4 px-1"
-                      >
-                        <Zap className="h-3 w-3" />
-                      </Badge>
-                    )}
-                  </div>
-                </div>
+                </Link>
               ))}
             </div>
           ) : (
