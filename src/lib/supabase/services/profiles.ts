@@ -5,20 +5,49 @@ function getSupabase() {
   return createClient();
 }
 
-export async function getProfile(userId: string): Promise<Profile | null> {
+export async function getProfile(
+  userId: string,
+  retryCount = 0,
+): Promise<Profile | null> {
+  const maxRetries = 3;
   const supabase = getSupabase();
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", userId)
-    .single();
 
-  if (error) {
-    console.error("Error fetching profile:", error);
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+
+    if (error) {
+      // Retry on network/connection errors
+      if (
+        retryCount < maxRetries &&
+        (error.message?.includes("network") ||
+          error.message?.includes("fetch") ||
+          error.message?.includes("Failed"))
+      ) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, 500 * (retryCount + 1)),
+        );
+        return getProfile(userId, retryCount + 1);
+      }
+      console.error("Error fetching profile:", error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    // Retry on unexpected errors
+    if (retryCount < maxRetries) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, 500 * (retryCount + 1)),
+      );
+      return getProfile(userId, retryCount + 1);
+    }
+    console.error("Exception fetching profile:", err);
     return null;
   }
-
-  return data;
 }
 
 export async function getProfiles(): Promise<Profile[]> {
@@ -37,7 +66,7 @@ export async function getProfiles(): Promise<Profile[]> {
 }
 
 export async function getProfilesByRole(
-  role: "member" | "author" | "editor" | "admin"
+  role: "member" | "author" | "editor" | "admin",
 ): Promise<Profile[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase
@@ -61,7 +90,7 @@ export async function updateProfile(
     avatar_url: string;
     bio: string;
     social_links: Record<string, string>;
-  }>
+  }>,
 ): Promise<{ data: Profile | null; error: Error | null }> {
   const supabase = getSupabase();
 
@@ -90,7 +119,7 @@ export async function updateProfile(
 export async function uploadAvatar(
   userId: string,
   file: Blob,
-  fileName: string
+  fileName: string,
 ): Promise<{ url: string | null; error: Error | null }> {
   const supabase = getSupabase();
 
@@ -121,7 +150,7 @@ export async function uploadAvatar(
 // Admin function to update user role
 export async function updateUserRole(
   userId: string,
-  role: "member" | "author" | "editor" | "admin"
+  role: "member" | "author" | "editor" | "admin",
 ): Promise<Profile | null> {
   const supabase = getSupabase();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -43,7 +43,7 @@ CREATE POLICY "Admins can manage ads"
     EXISTS (
       SELECT 1 FROM profiles
       WHERE profiles.id = auth.uid()
-      AND profiles.role IN ('admin', 'super_admin')
+      AND profiles.role IN ('admin')
     )
   );
 

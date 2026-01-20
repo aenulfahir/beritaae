@@ -27,13 +27,28 @@ export function AdBanner({
   const [loading, setLoading] = useState(true);
   const [impressionTracked, setImpressionTracked] = useState(false);
 
-  // Fetch ad on mount
+  // Fetch ad on mount with retry
   useEffect(() => {
+    let retryCount = 0;
+    const maxRetries = 3;
+
     async function fetchAd() {
       setLoading(true);
-      const activeAd = await getActiveAdForSlot(slotType);
-      setAd(activeAd);
-      setLoading(false);
+      try {
+        const activeAd = await getActiveAdForSlot(slotType);
+        setAd(activeAd);
+        retryCount = 0;
+      } catch (error) {
+        console.error(`Error fetching ad for slot ${slotType}:`, error);
+        // Retry on failure
+        if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(fetchAd, 1000 * retryCount);
+          return;
+        }
+      } finally {
+        setLoading(false);
+      }
     }
     fetchAd();
   }, [slotType]);
@@ -90,7 +105,7 @@ export function AdBanner({
     <div
       className={cn(
         "relative overflow-hidden rounded-lg cursor-pointer group",
-        className
+        className,
       )}
       onClick={handleClick}
       style={isResponsive ? { maxWidth: dimensions.width } : undefined}

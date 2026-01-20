@@ -61,6 +61,8 @@ export function BreakingNewsTicker() {
 
   useEffect(() => {
     let isMounted = true;
+    let retryCount = 0;
+    const maxRetries = 3;
 
     const fetchBreakingNews = async () => {
       try {
@@ -78,16 +80,36 @@ export function BreakingNewsTicker() {
 
         if (error) {
           console.error("Error fetching breaking news:", error);
+
+          // Retry on network errors
+          if (
+            retryCount < maxRetries &&
+            (error.message?.includes("network") ||
+              error.message?.includes("fetch") ||
+              error.message?.includes("Failed"))
+          ) {
+            retryCount++;
+            setTimeout(fetchBreakingNews, 1000 * retryCount);
+            return;
+          }
+
           setHasError(true);
           setIsLoading(false);
           return;
         }
 
+        retryCount = 0; // Reset retry count on success
         setBreakingItems(data || []);
         setHasError(false);
       } catch (error) {
         console.error("Error:", error);
         if (isMounted) {
+          // Retry on unexpected errors
+          if (retryCount < maxRetries) {
+            retryCount++;
+            setTimeout(fetchBreakingNews, 1000 * retryCount);
+            return;
+          }
           setHasError(true);
         }
       } finally {
@@ -100,7 +122,10 @@ export function BreakingNewsTicker() {
     fetchBreakingNews();
 
     // Refresh every 30 seconds
-    const interval = setInterval(fetchBreakingNews, 30000);
+    const interval = setInterval(() => {
+      retryCount = 0;
+      fetchBreakingNews();
+    }, 30000);
     return () => {
       isMounted = false;
       clearInterval(interval);
@@ -171,6 +196,8 @@ export function LatestNewsTicker() {
 
   useEffect(() => {
     let isMounted = true;
+    let retryCount = 0;
+    const maxRetries = 3;
 
     const fetchLatestNews = async () => {
       try {
@@ -188,16 +215,36 @@ export function LatestNewsTicker() {
 
         if (error) {
           console.error("Error fetching latest news:", error);
+
+          // Retry on network errors
+          if (
+            retryCount < maxRetries &&
+            (error.message?.includes("network") ||
+              error.message?.includes("fetch") ||
+              error.message?.includes("Failed"))
+          ) {
+            retryCount++;
+            setTimeout(fetchLatestNews, 1000 * retryCount);
+            return;
+          }
+
           setHasError(true);
           setIsLoading(false);
           return;
         }
 
+        retryCount = 0; // Reset retry count on success
         setLatestItems(data || []);
         setHasError(false);
       } catch (error) {
         console.error("Error:", error);
         if (isMounted) {
+          // Retry on unexpected errors
+          if (retryCount < maxRetries) {
+            retryCount++;
+            setTimeout(fetchLatestNews, 1000 * retryCount);
+            return;
+          }
           setHasError(true);
         }
       } finally {
@@ -210,7 +257,10 @@ export function LatestNewsTicker() {
     fetchLatestNews();
 
     // Refresh every 60 seconds
-    const interval = setInterval(fetchLatestNews, 60000);
+    const interval = setInterval(() => {
+      retryCount = 0;
+      fetchLatestNews();
+    }, 60000);
     return () => {
       isMounted = false;
       clearInterval(interval);

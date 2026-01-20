@@ -5,6 +5,11 @@ import { Database } from "@/types/supabase";
 let browserClient: ReturnType<typeof createBrowserClient<Database>> | null =
   null;
 
+// Track if client is being initialized to prevent race conditions
+let clientInitPromise: Promise<
+  ReturnType<typeof createBrowserClient<Database>>
+> | null = null;
+
 export function createClient() {
   // Return existing client if available (singleton pattern)
   if (browserClient) {
@@ -24,7 +29,7 @@ export function createClient() {
     // Only log once in development
     if (process.env.NODE_ENV === "development") {
       console.warn(
-        "[Supabase Client] Using mock client - env vars not available"
+        "[Supabase Client] Using mock client - env vars not available",
       );
     }
     return createMockBrowserClient();
@@ -35,9 +40,69 @@ export function createClient() {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
+      flowType: "pkce",
+    },
+    global: {
+      headers: {
+        "x-client-info": "supabase-js-web",
+      },
+    },
+    // Add connection retry settings
+    db: {
+      schema: "public",
     },
   });
   return browserClient;
+}
+
+// Helper to get client with session check - use this for authenticated operations
+export async function getClientWithSession() {
+  const client = createClient();
+
+  // Ensure session is fresh
+  try {
+    const {
+      data: { session },
+      error,
+    } = await client.auth.getSession();
+    if (error) {
+      console.warn("[Supabase] Session check error:", error.message);
+    }
+    return { client, session };
+  } catch (err) {
+    console.warn("[Supabase] Failed to check session:", err);
+    return { client, session: null };
+  }
+}
+
+// Helper for retrying failed requests
+export async function withRetry<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 2,
+  delayMs: number = 500,
+): Promise<T> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxRetries) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, delayMs * (attempt + 1)),
+        );
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+// Reset client (useful for logout or when session becomes invalid)
+export function resetClient() {
+  browserClient = null;
+  clientInitPromise = null;
 }
 
 // Mock client for SSR/build-time

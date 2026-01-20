@@ -10,7 +10,7 @@ import {
   useRef,
 } from "react";
 import { User, Session, AuthError } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, resetClient } from "@/lib/supabase/client";
 import { Profile } from "@/types";
 import { useRouter } from "next/navigation";
 
@@ -19,17 +19,18 @@ interface AuthContextType {
   profile: Profile | null;
   session: Session | null;
   isLoading: boolean;
+  isReady: boolean; // New: indicates auth state is fully initialized
   signIn: (
     email: string,
-    password: string
+    password: string,
   ) => Promise<{ error: AuthError | null }>;
   signUp: (
     email: string,
     password: string,
-    fullName: string
+    fullName: string,
   ) => Promise<{ error: AuthError | null }>;
   signInWithOAuth: (
-    provider: "google" | "github"
+    provider: "google" | "github",
   ) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -42,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isReady, setIsReady] = useState(false);
   const router = useRouter();
 
   // Use ref to track last session token to prevent unnecessary updates
@@ -52,7 +54,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = useMemo(() => createClient(), []);
 
   const fetchProfile = useCallback(
-    async (userId: string): Promise<Profile | null> => {
+    async (userId: string, retryCount = 0): Promise<Profile | null> => {
+      const maxRetries = 3;
+
       try {
         const { data, error } = await supabase
           .from("profiles")
@@ -91,17 +95,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               return newProfile as Profile;
             }
           }
+
+          // Retry on network/connection errors
+          if (
+            retryCount < maxRetries &&
+            (error.message?.includes("network") ||
+              error.message?.includes("fetch") ||
+              error.message?.includes("Failed"))
+          ) {
+            await new Promise((resolve) =>
+              setTimeout(resolve, 500 * (retryCount + 1)),
+            );
+            return fetchProfile(userId, retryCount + 1);
+          }
+
           console.error("Error fetching profile:", error.message);
           return null;
         }
 
         return data as Profile;
       } catch (err) {
+        // Retry on unexpected errors
+        if (retryCount < maxRetries) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, 500 * (retryCount + 1)),
+          );
+          return fetchProfile(userId, retryCount + 1);
+        }
         console.error("Exception fetching profile:", err);
         return null;
       }
     },
-    [supabase]
+    [supabase],
   );
 
   const refreshProfile = useCallback(async () => {
@@ -142,6 +167,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } finally {
         if (mounted) {
           setIsLoading(false);
+          setIsReady(true);
         }
       }
     };
@@ -212,7 +238,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       return { error };
     },
-    [supabase]
+    [supabase],
   );
 
   const signUp = useCallback(
@@ -229,7 +255,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       return { error };
     },
-    [supabase]
+    [supabase],
   );
 
   const signInWithOAuth = useCallback(
@@ -242,7 +268,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       return { error };
     },
-    [supabase]
+    [supabase],
   );
 
   const signOut = useCallback(async () => {
@@ -251,6 +277,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setProfile(null);
       setSession(null);
+      resetClient(); // Reset client to clear any stale state
       router.push("/");
       router.refresh();
     } catch (error) {
@@ -264,6 +291,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       profile,
       session,
       isLoading,
+      isReady,
       signIn,
       signUp,
       signInWithOAuth,
@@ -275,12 +303,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       profile,
       session,
       isLoading,
+      isReady,
       signIn,
       signUp,
       signInWithOAuth,
       signOut,
       refreshProfile,
-    ]
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

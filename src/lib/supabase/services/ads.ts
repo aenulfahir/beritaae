@@ -28,30 +28,58 @@ export function isAdActive(ad: Ad): boolean {
   return now >= startDate && now <= endDate;
 }
 
-// Get active ad for a specific slot (client-side)
+// Get active ad for a specific slot (client-side) with retry
 export async function getActiveAdForSlot(
-  slotType: AdSlotType
+  slotType: AdSlotType,
+  retryCount = 0,
 ): Promise<Ad | null> {
+  const maxRetries = 3;
   const supabase = createClient();
   const now = new Date().toISOString();
 
-  const { data, error } = await supabase
-    .from("ads")
-    .select("*")
-    .eq("slot_type", slotType)
-    .eq("is_active", true)
-    .lte("start_date", now)
-    .gte("end_date", now)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  try {
+    const { data, error } = await supabase
+      .from("ads")
+      .select("*")
+      .eq("slot_type", slotType)
+      .eq("is_active", true)
+      .lte("start_date", now)
+      .gte("end_date", now)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-  if (error) {
-    console.error("Error fetching ad:", error);
+    if (error) {
+      console.error("Error fetching ad:", error);
+
+      // Retry on network errors
+      if (
+        retryCount < maxRetries &&
+        (error.message?.includes("network") ||
+          error.message?.includes("fetch") ||
+          error.message?.includes("Failed"))
+      ) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, 500 * (retryCount + 1)),
+        );
+        return getActiveAdForSlot(slotType, retryCount + 1);
+      }
+
+      return null;
+    }
+
+    return data as Ad | null;
+  } catch (err) {
+    // Retry on unexpected errors
+    if (retryCount < maxRetries) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, 500 * (retryCount + 1)),
+      );
+      return getActiveAdForSlot(slotType, retryCount + 1);
+    }
+    console.error("Exception fetching ad:", err);
     return null;
   }
-
-  return data as Ad | null;
 }
 
 // Get all ads (admin)
@@ -109,7 +137,7 @@ export async function createAd(input: AdCreateInput): Promise<Ad | null> {
 // Update ad
 export async function updateAd(
   id: string,
-  input: AdUpdateInput
+  input: AdUpdateInput,
 ): Promise<Ad | null> {
   if (input.slot_type && !isValidSlotType(input.slot_type)) {
     console.error("Invalid slot type:", input.slot_type);

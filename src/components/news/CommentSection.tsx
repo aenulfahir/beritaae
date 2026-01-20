@@ -109,7 +109,7 @@ function RoleBadge({ role }: { role?: string }) {
       variant="secondary"
       className={cn(
         "text-[10px] px-1.5 py-0 h-4 border-0 gap-0.5 font-medium",
-        config.color
+        config.color,
       )}
     >
       {config.icon}
@@ -189,7 +189,7 @@ function SingleComment({
         className={cn(
           "flex gap-3",
           !isReply &&
-            "p-4 rounded-2xl hover:bg-accent/30 transition-colors border border-transparent hover:border-border/50"
+            "p-4 rounded-2xl hover:bg-accent/30 transition-colors border border-transparent hover:border-border/50",
         )}
       >
         {/* Avatar */}
@@ -198,7 +198,7 @@ function SingleComment({
             src={
               comment.author?.avatar ||
               `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                comment.author?.name || "U"
+                comment.author?.name || "U",
               )}&background=random`
             }
             alt={comment.author?.name || "User"}
@@ -206,7 +206,7 @@ function SingleComment({
             height={isReply ? 32 : 40}
             className={cn(
               "rounded-full object-cover aspect-square",
-              isVerified ? "ring-2 ring-blue-500/50" : "ring-2 ring-background"
+              isVerified ? "ring-2 ring-blue-500/50" : "ring-2 ring-background",
             )}
             unoptimized
           />
@@ -230,7 +230,7 @@ function SingleComment({
           <p
             className={cn(
               "text-sm leading-relaxed whitespace-pre-wrap break-words",
-              isReply ? "text-muted-foreground" : ""
+              isReply ? "text-muted-foreground" : "",
             )}
           >
             {comment.content}
@@ -243,7 +243,7 @@ function SingleComment({
               size="sm"
               className={cn(
                 "h-8 px-2 gap-1.5 text-xs rounded-full",
-                liked && "text-red-500"
+                liked && "text-red-500",
               )}
               onClick={handleLike}
               disabled={!userId}
@@ -375,15 +375,17 @@ export function CommentSection({ articleId }: CommentSectionProps) {
   // Report dialog state
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [reportingCommentId, setReportingCommentId] = useState<string | null>(
-    null
+    null,
   );
   const [reportReason, setReportReason] = useState("");
   const [reportDescription, setReportDescription] = useState("");
   const [isReporting, setIsReporting] = useState(false);
 
-  // Fetch comments on mount
+  // Fetch comments on mount with retry
   useEffect(() => {
     let isMounted = true;
+    let retryCount = 0;
+    const maxRetries = 3;
 
     const fetchComments = async () => {
       setIsLoading(true);
@@ -391,10 +393,17 @@ export function CommentSection({ articleId }: CommentSectionProps) {
         const data = await getArticleComments(articleId);
         if (isMounted) {
           setComments(data);
+          retryCount = 0;
         }
       } catch (error) {
         console.error("Error fetching comments:", error);
         if (isMounted) {
+          // Retry on failure
+          if (retryCount < maxRetries) {
+            retryCount++;
+            setTimeout(fetchComments, 1000 * retryCount);
+            return;
+          }
           setComments([]);
         }
       } finally {
@@ -440,7 +449,7 @@ export function CommentSection({ articleId }: CommentSectionProps) {
 
   const totalComments = comments.reduce(
     (acc, c) => acc + 1 + (c.replies?.length || 0),
-    0
+    0,
   );
 
   const sortedComments = [...comments].sort((a, b) => {
@@ -493,7 +502,7 @@ export function CommentSection({ articleId }: CommentSectionProps) {
               };
             }
             return c;
-          })
+          }),
         );
       }
     } catch (error) {
@@ -588,7 +597,7 @@ export function CommentSection({ articleId }: CommentSectionProps) {
                     profile?.full_name ||
                       user?.user_metadata?.full_name ||
                       user?.email ||
-                      "U"
+                      "U",
                   )}&background=random`
                 }
                 alt={
@@ -706,7 +715,7 @@ export function CommentSection({ articleId }: CommentSectionProps) {
                       "flex items-center gap-3 p-3 rounded-lg border text-left transition-all",
                       reportReason === reason.value
                         ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
+                        : "border-border hover:border-primary/50",
                     )}
                   >
                     <span className="text-lg">{reason.icon}</span>

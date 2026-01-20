@@ -84,37 +84,30 @@ function buildCommentTree(comments: Comment[]): Comment[] {
 }
 
 export async function getArticleComments(
-  articleId: string
+  articleId: string,
+  retryCount = 0,
 ): Promise<Comment[]> {
+  const maxRetries = 3;
+
   try {
     const supabase = getSupabase();
 
     // Add timeout to prevent infinite loading
-    const timeoutPromise = new Promise<{
-      data: null;
-      error: { message: string };
-    }>((_, reject) =>
-      setTimeout(
-        () => reject({ data: null, error: { message: "Request timeout" } }),
-        10000
-      )
-    );
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-    const queryPromise = supabase
+    const { data, error } = await supabase
       .from("comments")
       .select(
         `
         *,
         profiles:user_id (*)
-      `
+      `,
       )
       .eq("article_id", articleId)
       .order("created_at", { ascending: true });
 
-    const { data, error } = (await Promise.race([
-      queryPromise,
-      timeoutPromise,
-    ])) as { data: any; error: any };
+    clearTimeout(timeoutId);
 
     if (error) {
       // Silently handle error if table doesn't exist yet or RLS blocks access
@@ -125,6 +118,21 @@ export async function getArticleComments(
       if (error.code === "42501" || error.code === "PGRST116") {
         return [];
       }
+
+      // Retry on network/connection errors
+      if (
+        retryCount < maxRetries &&
+        (error.message?.includes("network") ||
+          error.message?.includes("fetch") ||
+          error.message?.includes("Failed") ||
+          error.message?.includes("timeout"))
+      ) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, 500 * (retryCount + 1)),
+        );
+        return getArticleComments(articleId, retryCount + 1);
+      }
+
       // Only log meaningful errors (not empty objects from RLS)
       if (isRealError(error)) {
         console.error("Error fetching comments:", error.message || error);
@@ -133,10 +141,17 @@ export async function getArticleComments(
     }
 
     const comments = (data || []).map((row: Record<string, unknown>) =>
-      transformComment(row)
+      transformComment(row),
     );
     return buildCommentTree(comments);
   } catch (err) {
+    // Retry on unexpected errors
+    if (retryCount < maxRetries) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, 500 * (retryCount + 1)),
+      );
+      return getArticleComments(articleId, retryCount + 1);
+    }
     // Handle any unexpected errors - only log meaningful ones
     if (isRealError(err)) {
       console.error("Unexpected error fetching comments:", err);
@@ -202,7 +217,7 @@ export async function createComment(commentData: {
       `
       *,
       profiles:user_id (*)
-    `
+    `,
     )
     .single();
 
@@ -212,7 +227,7 @@ export async function createComment(commentData: {
   }
 
   const transformedComment = transformComment(
-    comment as Record<string, unknown>
+    comment as Record<string, unknown>,
   );
 
   // Send notification if this is a reply to another comment
@@ -265,14 +280,14 @@ export async function createComment(commentData: {
               parent_comment_preview: parentContentPreview,
               reply_content: transformedComment.content,
             },
-          }
+          },
         );
 
         // If RPC fails, try direct insert (fallback)
         if (rpcError) {
           console.log(
             "RPC notification failed, trying direct insert:",
-            rpcError.message
+            rpcError.message,
           );
           await createNotification({
             user_id: parentComment.user_id,
@@ -307,7 +322,7 @@ export async function createComment(commentData: {
 
 export async function updateComment(
   id: string,
-  content: string
+  content: string,
 ): Promise<Comment | null> {
   const supabase = getSupabase();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -319,7 +334,7 @@ export async function updateComment(
       `
       *,
       profiles:user_id (*)
-    `
+    `,
     )
     .single();
 
@@ -345,7 +360,7 @@ export async function deleteComment(id: string): Promise<boolean> {
 
 export async function toggleCommentLike(
   commentId: string,
-  userId: string
+  userId: string,
 ): Promise<boolean> {
   const supabase = getSupabase();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -364,7 +379,7 @@ export async function toggleCommentLike(
 
 export async function isCommentLiked(
   commentId: string,
-  userId: string
+  userId: string,
 ): Promise<boolean> {
   const supabase = getSupabase();
   const { data, error } = await supabase
@@ -387,7 +402,7 @@ export function subscribeToComments(
     eventType: string;
     new: Comment | null;
     old: Comment | null;
-  }) => void
+  }) => void,
 ): RealtimeChannel {
   const supabase = getSupabase();
 
@@ -431,7 +446,7 @@ export function subscribeToComments(
         } catch (error) {
           console.error("Error processing realtime comment:", error);
         }
-      }
+      },
     )
     .subscribe((status) => {
       if (status === "CHANNEL_ERROR") {
@@ -467,7 +482,7 @@ export async function getPendingComments(): Promise<Comment[]> {
       `
       *,
       profiles:user_id (*)
-    `
+    `,
     )
     .eq("is_approved", false)
     .order("created_at", { ascending: false });
@@ -478,7 +493,7 @@ export async function getPendingComments(): Promise<Comment[]> {
   }
 
   return (data || []).map((row) =>
-    transformComment(row as Record<string, unknown>)
+    transformComment(row as Record<string, unknown>),
   );
 }
 
@@ -557,7 +572,7 @@ export interface CommentReport {
 }
 
 export async function getCommentReports(
-  status?: string
+  status?: string,
 ): Promise<CommentReport[]> {
   const supabase = getSupabase();
 
@@ -575,7 +590,7 @@ export async function getCommentReports(
         articles:article_id (id, title, slug)
       ),
       reporter:profiles!comment_reports_reporter_id_fkey (id, full_name, avatar_url)
-    `
+    `,
     )
     .order("created_at", { ascending: false });
 
@@ -597,7 +612,7 @@ export async function getCommentReports(
 export async function updateReportStatus(
   reportId: string,
   status: string,
-  reviewerId: string
+  reviewerId: string,
 ): Promise<boolean> {
   const supabase = getSupabase();
 
