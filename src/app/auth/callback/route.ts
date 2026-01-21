@@ -25,28 +25,34 @@ export async function GET(request: Request) {
           setAll(cookiesToSet) {
             try {
               cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
+                cookieStore.set(name, value, options),
               );
             } catch {
               // Ignore errors in Server Components
             }
           },
         },
-      }
+      },
     );
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-    if (!error) {
-      // Force redirect with revalidation to ensure session is picked up
+    if (!error && data.session) {
+      // Session successfully created, redirect
       const response = NextResponse.redirect(`${origin}${next}`);
+
+      // Set cache control to prevent caching of auth state
+      response.headers.set("Cache-Control", "no-store, max-age=0");
+
       return response;
     }
 
+    const errorMessage =
+      error?.message || "Unknown error during authentication";
+    console.error("[Auth Callback] Error exchanging code:", errorMessage);
+
     return NextResponse.redirect(
-      `${origin}/auth/auth-code-error?error=${encodeURIComponent(
-        error.message
-      )}`
+      `${origin}/auth/auth-code-error?error=${encodeURIComponent(errorMessage)}`,
     );
   }
 
@@ -69,14 +75,14 @@ export async function GET(request: Request) {
           setAll(cookiesToSet) {
             try {
               cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
+                cookieStore.set(name, value, options),
               );
             } catch {
               // Ignore errors in Server Components
             }
           },
         },
-      }
+      },
     );
 
     const { error } = await supabase.auth.verifyOtp({
@@ -85,13 +91,15 @@ export async function GET(request: Request) {
     });
 
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      const response = NextResponse.redirect(`${origin}${next}`);
+      response.headers.set("Cache-Control", "no-store, max-age=0");
+      return response;
     }
 
     return NextResponse.redirect(
       `${origin}/auth/auth-code-error?error=${encodeURIComponent(
-        error.message
-      )}`
+        error.message,
+      )}`,
     );
   }
 
@@ -113,14 +121,14 @@ export async function GET(request: Request) {
           setAll(cookiesToSet) {
             try {
               cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
+                cookieStore.set(name, value, options),
               );
             } catch {
               // Ignore errors in Server Components
             }
           },
         },
-      }
+      },
     );
 
     const { error } = await supabase.auth.verifyOtp({
@@ -129,18 +137,20 @@ export async function GET(request: Request) {
     });
 
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      const response = NextResponse.redirect(`${origin}${next}`);
+      response.headers.set("Cache-Control", "no-store, max-age=0");
+      return response;
     }
 
     return NextResponse.redirect(
       `${origin}/auth/auth-code-error?error=${encodeURIComponent(
-        error.message
-      )}`
+        error.message,
+      )}`,
     );
   }
 
   // No valid params, redirect to error page
   return NextResponse.redirect(
-    `${origin}/auth/auth-code-error?error=invalid_request`
+    `${origin}/auth/auth-code-error?error=invalid_request`,
   );
 }

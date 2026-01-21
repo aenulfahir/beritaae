@@ -10,7 +10,11 @@ import {
   useRef,
 } from "react";
 import { User, Session, AuthError } from "@supabase/supabase-js";
-import { createClient, resetClient } from "@/lib/supabase/client";
+import {
+  createClient,
+  resetClient,
+  ensureSessionInitialized,
+} from "@/lib/supabase/client";
 import { Profile } from "@/types";
 import { useRouter } from "next/navigation";
 
@@ -34,6 +38,7 @@ interface AuthContextType {
   ) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  refreshSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -136,6 +141,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user, fetchProfile]);
 
+  // Refresh session manually - useful when session might be stale
+  const refreshSession = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error) {
+        console.warn("[Auth] Session refresh error:", error.message);
+        // If refresh fails, try to get current session
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData.session) {
+          setSession(sessionData.session);
+          setUser(sessionData.session.user);
+        }
+      } else if (data.session) {
+        setSession(data.session);
+        setUser(data.session.user);
+        if (data.session.user) {
+          const profileData = await fetchProfile(data.session.user.id);
+          setProfile(profileData);
+        }
+      }
+    } catch (err) {
+      console.error("[Auth] Failed to refresh session:", err);
+    }
+  }, [supabase, fetchProfile]);
+
   useEffect(() => {
     let mounted = true;
 
@@ -146,20 +176,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isInitializedRef.current = true;
 
       try {
+        // Ensure session is initialized first
+        await ensureSessionInitialized();
+
         const {
           data: { session: initialSession },
+          error: sessionError,
         } = await supabase.auth.getSession();
 
         if (!mounted) return;
 
-        lastSessionTokenRef.current = initialSession?.access_token ?? null;
-        setSession(initialSession);
-        setUser(initialSession?.user ?? null);
+        // If session error, try to refresh
+        if (sessionError) {
+          console.warn("[Auth] Initial session error:", sessionError.message);
+          const { data: refreshData } = await supabase.auth.refreshSession();
+          if (refreshData.session && mounted) {
+            lastSessionTokenRef.current = refreshData.session.access_token;
+            setSession(refreshData.session);
+            setUser(refreshData.session.user);
+            const profileData = await fetchProfile(refreshData.session.user.id);
+            if (mounted) setProfile(profileData);
+          }
+        } else {
+          lastSessionTokenRef.current = initialSession?.access_token ?? null;
+          setSession(initialSession);
+          setUser(initialSession?.user ?? null);
 
-        if (initialSession?.user) {
-          const profileData = await fetchProfile(initialSession.user.id);
-          if (mounted) {
-            setProfile(profileData);
+          if (initialSession?.user) {
+            const profileData = await fetchProfile(initialSession.user.id);
+            if (mounted) {
+              setProfile(profileData);
+            }
           }
         }
       } catch (error) {
@@ -184,51 +231,99 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const newToken = currentSession?.access_token ?? null;
 
-      // For SIGNED_IN event (including OAuth), always process
-      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-        lastSessionTokenRef.current = newToken;
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
+      // Handle different auth events
+      switch (event) {
+        case "SIGNED_IN":
+        case "TOKEN_REFRESHED":
+          lastSessionTokenRef.current = newToken;
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
 
-        if (currentSession?.user) {
-          // Small delay to allow database trigger to create profile
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          const profileData = await fetchProfile(currentSession.user.id);
-          if (mounted) {
-            setProfile(profileData);
+          if (currentSession?.user) {
+            // Small delay to allow database trigger to create profile
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            const profileData = await fetchProfile(currentSession.user.id);
+            if (mounted) {
+              setProfile(profileData);
+            }
+          }
+          setIsLoading(false);
+          break;
+
+        case "SIGNED_OUT":
+          lastSessionTokenRef.current = null;
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setIsLoading(false);
+          break;
+
+        case "USER_UPDATED":
+          if (currentSession?.user) {
+            setUser(currentSession.user);
+            const profileData = await fetchProfile(currentSession.user.id);
+            if (mounted) setProfile(profileData);
+          }
+          break;
+
+        default:
+          // Skip if token hasn't changed
+          if (newToken === lastSessionTokenRef.current) {
+            return;
+          }
+
+          lastSessionTokenRef.current = newToken;
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+
+          if (currentSession?.user) {
+            const profileData = await fetchProfile(currentSession.user.id);
+            if (mounted) {
+              setProfile(profileData);
+            }
+          } else {
+            setProfile(null);
+          }
+
+          setIsLoading(false);
+      }
+    });
+
+    // Periodic session check to handle stale sessions
+    const sessionCheckInterval = setInterval(async () => {
+      if (!mounted) return;
+
+      try {
+        const {
+          data: { session: currentSession },
+          error,
+        } = await supabase.auth.getSession();
+
+        // If we have a user but session is invalid, try to refresh
+        if (user && (!currentSession || error)) {
+          console.log("[Auth] Session check: refreshing stale session");
+          const { data: refreshData } = await supabase.auth.refreshSession();
+          if (refreshData.session && mounted) {
+            setSession(refreshData.session);
+            setUser(refreshData.session.user);
+          } else if (mounted) {
+            // Session truly expired, clear state
+            setSession(null);
+            setUser(null);
+            setProfile(null);
           }
         }
-        setIsLoading(false);
-        return;
+      } catch (err) {
+        console.warn("[Auth] Session check error:", err);
       }
-
-      // Skip if token hasn't changed (except for sign out)
-      if (newToken === lastSessionTokenRef.current && event !== "SIGNED_OUT") {
-        return;
-      }
-
-      lastSessionTokenRef.current = newToken;
-
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-
-      if (currentSession?.user) {
-        const profileData = await fetchProfile(currentSession.user.id);
-        if (mounted) {
-          setProfile(profileData);
-        }
-      } else {
-        setProfile(null);
-      }
-
-      setIsLoading(false);
-    });
+    }, 60000); // Check every minute
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      clearInterval(sessionCheckInterval);
     };
-  }, [supabase, fetchProfile]);
+  }, [supabase, fetchProfile, user]);
 
   const signIn = useCallback(
     async (email: string, password: string) => {
@@ -297,6 +392,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signInWithOAuth,
       signOut,
       refreshProfile,
+      refreshSession,
     }),
     [
       user,
@@ -309,6 +405,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signInWithOAuth,
       signOut,
       refreshProfile,
+      refreshSession,
     ],
   );
 

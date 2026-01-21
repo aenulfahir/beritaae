@@ -36,15 +36,32 @@ export async function middleware(request: NextRequest) {
       },
     });
 
-    // Refresh session if expired - wrap in try-catch to handle network errors
-    const {
-      data: { user },
-      error,
-    } = await supabase.auth.getUser();
+    // Get user - this also refreshes the session if needed
+    let user = null;
+    let authError = null;
+
+    try {
+      const result = await supabase.auth.getUser();
+      user = result.data.user;
+      authError = result.error;
+    } catch (err) {
+      // Network error - allow request to proceed
+      console.warn("[Middleware] Auth network error:", err);
+    }
+
+    // If session expired, try to refresh it
+    if (authError && authError.message?.includes("expired")) {
+      try {
+        const { data: refreshData } = await supabase.auth.refreshSession();
+        user = refreshData.user;
+      } catch (refreshErr) {
+        console.warn("[Middleware] Session refresh failed:", refreshErr);
+      }
+    }
 
     // Log auth errors but don't block the request
-    if (error && error.message !== "Auth session missing!") {
-      console.warn("[Middleware] Auth error:", error.message);
+    if (authError && authError.message !== "Auth session missing!") {
+      console.warn("[Middleware] Auth error:", authError.message);
     }
 
     // Protected routes that require authentication

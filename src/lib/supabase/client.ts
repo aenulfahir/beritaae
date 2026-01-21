@@ -5,10 +5,9 @@ import { Database } from "@/types/supabase";
 let browserClient: ReturnType<typeof createBrowserClient<Database>> | null =
   null;
 
-// Track if client is being initialized to prevent race conditions
-let clientInitPromise: Promise<
-  ReturnType<typeof createBrowserClient<Database>>
-> | null = null;
+// Track session initialization state
+let sessionInitialized = false;
+let sessionInitPromise: Promise<void> | null = null;
 
 export function createClient() {
   // Return existing client if available (singleton pattern)
@@ -41,22 +40,52 @@ export function createClient() {
       autoRefreshToken: true,
       detectSessionInUrl: true,
       flowType: "pkce",
+      // Storage key to ensure consistent session across tabs
+      storageKey: "beritaae-auth-token",
     },
     global: {
       headers: {
         "x-client-info": "supabase-js-web",
       },
     },
-    // Add connection retry settings
     db: {
       schema: "public",
     },
   });
+
   return browserClient;
+}
+
+// Ensure session is initialized before making requests
+export async function ensureSessionInitialized(): Promise<void> {
+  if (sessionInitialized) return;
+
+  if (sessionInitPromise) {
+    return sessionInitPromise;
+  }
+
+  sessionInitPromise = (async () => {
+    const client = createClient();
+    try {
+      // This will refresh the session if needed
+      const { error } = await client.auth.getSession();
+      if (error) {
+        console.warn("[Supabase] Session init error:", error.message);
+      }
+    } catch (err) {
+      console.warn("[Supabase] Session init failed:", err);
+    } finally {
+      sessionInitialized = true;
+      sessionInitPromise = null;
+    }
+  })();
+
+  return sessionInitPromise;
 }
 
 // Helper to get client with session check - use this for authenticated operations
 export async function getClientWithSession() {
+  await ensureSessionInitialized();
   const client = createClient();
 
   // Ensure session is fresh
@@ -67,6 +96,14 @@ export async function getClientWithSession() {
     } = await client.auth.getSession();
     if (error) {
       console.warn("[Supabase] Session check error:", error.message);
+      // Try to refresh the session
+      if (
+        error.message?.includes("expired") ||
+        error.message?.includes("invalid")
+      ) {
+        const { data: refreshData } = await client.auth.refreshSession();
+        return { client, session: refreshData.session };
+      }
     }
     return { client, session };
   } catch (err) {
@@ -102,7 +139,8 @@ export async function withRetry<T>(
 // Reset client (useful for logout or when session becomes invalid)
 export function resetClient() {
   browserClient = null;
-  clientInitPromise = null;
+  sessionInitialized = false;
+  sessionInitPromise = null;
 }
 
 // Mock client for SSR/build-time
