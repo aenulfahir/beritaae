@@ -16,89 +16,59 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse;
   }
 
-  try {
-    const supabase = createServerClient(supabaseUrl, supabaseKey, {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value),
-          );
-          supabaseResponse = NextResponse.next({
-            request,
-          });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
-          );
-        },
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
       },
-    });
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) =>
+          request.cookies.set(name, value)
+        );
+        supabaseResponse = NextResponse.next({
+          request,
+        });
+        cookiesToSet.forEach(({ name, value, options }) =>
+          supabaseResponse.cookies.set(name, value, options)
+        );
+      },
+    },
+  });
 
-    // Get user - this also refreshes the session if needed
-    let user = null;
-    let authError = null;
+  // Refresh session if expired
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-    try {
-      const result = await supabase.auth.getUser();
-      user = result.data.user;
-      authError = result.error;
-    } catch (err) {
-      // Network error - allow request to proceed
-      console.warn("[Middleware] Auth network error:", err);
-    }
+  // Protected routes that require authentication
+  const protectedRoutes = ["/admin", "/saved", "/notifications"];
+  const isProtectedRoute = protectedRoutes.some((route) =>
+    request.nextUrl.pathname.startsWith(route)
+  );
 
-    // If session expired, try to refresh it
-    if (authError && authError.message?.includes("expired")) {
-      try {
-        const { data: refreshData } = await supabase.auth.refreshSession();
-        user = refreshData.user;
-      } catch (refreshErr) {
-        console.warn("[Middleware] Session refresh failed:", refreshErr);
-      }
-    }
-
-    // Log auth errors but don't block the request
-    if (authError && authError.message !== "Auth session missing!") {
-      console.warn("[Middleware] Auth error:", authError.message);
-    }
-
-    // Protected routes that require authentication
-    const protectedRoutes = ["/admin", "/saved", "/notifications"];
-    const isProtectedRoute = protectedRoutes.some((route) =>
-      request.nextUrl.pathname.startsWith(route),
-    );
-
-    // Redirect to login if accessing protected route without auth
-    if (isProtectedRoute && !user) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/login";
-      url.searchParams.set("redirectTo", request.nextUrl.pathname);
-      return NextResponse.redirect(url);
-    }
-
-    // Redirect to home if accessing auth pages while logged in
-    const authRoutes = ["/login", "/register"];
-    const isAuthRoute = authRoutes.some((route) =>
-      request.nextUrl.pathname.startsWith(route),
-    );
-
-    if (isAuthRoute && user) {
-      const redirectTo = request.nextUrl.searchParams.get("redirectTo") || "/";
-      const url = request.nextUrl.clone();
-      url.pathname = redirectTo;
-      url.searchParams.delete("redirectTo");
-      return NextResponse.redirect(url);
-    }
-
-    return supabaseResponse;
-  } catch (err) {
-    // On any error, allow the request to proceed
-    // The client-side auth will handle the session
-    console.warn("[Middleware] Error:", err);
-    return supabaseResponse;
+  // Redirect to login if accessing protected route without auth
+  if (isProtectedRoute && !user) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("redirectTo", request.nextUrl.pathname);
+    return NextResponse.redirect(url);
   }
+
+  // Redirect to home if accessing auth pages while logged in
+  const authRoutes = ["/login", "/register"];
+  const isAuthRoute = authRoutes.some((route) =>
+    request.nextUrl.pathname.startsWith(route)
+  );
+
+  if (isAuthRoute && user) {
+    const redirectTo = request.nextUrl.searchParams.get("redirectTo") || "/";
+    const url = request.nextUrl.clone();
+    url.pathname = redirectTo;
+    url.searchParams.delete("redirectTo");
+    return NextResponse.redirect(url);
+  }
+
+  return supabaseResponse;
 }
 
 export const config = {
