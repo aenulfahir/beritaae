@@ -384,22 +384,58 @@ export function CommentSection({ articleId }: CommentSectionProps) {
   // Fetch comments on mount with retry
   useEffect(() => {
     let isMounted = true;
-    let retryCount = 0;
-    const maxRetries = 2;
 
     const fetchComments = async () => {
       try {
-        const data = await getArticleComments(articleId);
-        if (isMounted) {
-          setComments(data);
+        // Use API route to bypass client-side RLS issues
+        const res = await fetch(`/api/comments/${articleId}`);
+        const json = await res.json();
+        if (isMounted && json.comments) {
+          // Build tree from flat list
+          const commentMap = new Map();
+          const roots: Comment[] = [];
+          const rawComments = json.comments.map(
+            (row: Record<string, unknown>) => {
+              const profiles = row.profiles as Record<string, unknown> | null;
+              return {
+                id: row.id as string,
+                article_id: row.article_id as string,
+                user_id: row.user_id as string,
+                parent_id: row.parent_id as string | null,
+                content: row.content as string,
+                likes_count: (row.likes_count as number) || 0,
+                is_approved: row.is_approved as boolean,
+                created_at: row.created_at as string,
+                updated_at: row.updated_at as string,
+                author: profiles
+                  ? {
+                      id: profiles.id as string,
+                      name: (profiles.full_name as string) || "Anonymous",
+                      avatar: (profiles.avatar_url as string) || "",
+                      email: profiles.email as string,
+                      role: profiles.role as string,
+                    }
+                  : undefined,
+                replies: [] as Comment[],
+              };
+            },
+          );
+          rawComments.forEach((c: Comment) =>
+            commentMap.set(c.id, { ...c, replies: [] }),
+          );
+          rawComments.forEach((c: Comment) => {
+            const mapped = commentMap.get(c.id)!;
+            if (c.parent_id) {
+              const parent = commentMap.get(c.parent_id);
+              if (parent) parent.replies.push(mapped);
+            } else {
+              roots.push(mapped);
+            }
+          });
+          setComments(roots);
         }
       } catch (error) {
         console.error("Error fetching comments:", error);
-        if (isMounted && retryCount < maxRetries) {
-          retryCount++;
-          setTimeout(fetchComments, 1000 * retryCount);
-          return;
-        }
         if (isMounted) setComments([]);
       } finally {
         if (isMounted) setIsLoading(false);
@@ -408,12 +444,9 @@ export function CommentSection({ articleId }: CommentSectionProps) {
 
     fetchComments();
 
-    // Fallback timeout - stop loading after 8 seconds no matter what
     const fallbackTimeout = setTimeout(() => {
-      if (isMounted && isLoading) {
-        setIsLoading(false);
-      }
-    }, 8000);
+      if (isMounted && isLoading) setIsLoading(false);
+    }, 6000);
 
     // Subscribe to real-time updates
     const channel = subscribeToComments(articleId, (payload) => {
@@ -421,19 +454,14 @@ export function CommentSection({ articleId }: CommentSectionProps) {
 
       if (payload.eventType === "INSERT" && payload.new) {
         setComments((prev) => {
-          // If it's a reply, add to parent
           if (payload.new!.parent_id) {
             return prev.map((c) => {
               if (c.id === payload.new!.parent_id) {
-                return {
-                  ...c,
-                  replies: [...(c.replies || []), payload.new!],
-                };
+                return { ...c, replies: [...(c.replies || []), payload.new!] };
               }
               return c;
             });
           }
-          // Otherwise add to root
           return [...prev, payload.new!];
         });
       } else if (payload.eventType === "DELETE" && payload.old) {
@@ -463,18 +491,42 @@ export function CommentSection({ articleId }: CommentSectionProps) {
 
     setIsSubmitting(true);
     try {
-      const newComment = await createComment({
-        article_id: articleId,
-        user_id: user.id,
-        content: commentText,
+      const res = await fetch(`/api/comments/${articleId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: commentText }),
       });
+      const json = await res.json();
 
-      if (newComment) {
+      if (res.ok && json.comment) {
+        const c = json.comment;
+        const profiles = c.profiles;
+        const newComment: Comment = {
+          id: c.id,
+          article_id: c.article_id,
+          user_id: c.user_id,
+          parent_id: c.parent_id,
+          content: c.content,
+          likes_count: c.likes_count || 0,
+          is_approved: c.is_approved,
+          created_at: c.created_at,
+          updated_at: c.updated_at,
+          author: profiles
+            ? {
+                id: profiles.id,
+                name: profiles.full_name || "Anonymous",
+                avatar: profiles.avatar_url || "",
+                email: profiles.email,
+                role: profiles.role,
+              }
+            : undefined,
+          replies: [],
+        };
         setComments((prev) => [...prev, newComment]);
         setCommentText("");
       } else {
         toast.error("Gagal mengirim komentar", {
-          description: "Coba refresh halaman dan kirim ulang.",
+          description: json.error || "Coba refresh halaman dan kirim ulang.",
         });
       }
     } catch (error) {
