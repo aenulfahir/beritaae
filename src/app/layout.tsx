@@ -14,7 +14,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "https://beritaae.com"
+    process.env.NEXT_PUBLIC_SITE_URL || "https://beritaae.com",
   ),
   title: {
     default: "BeritaAE - Portal Berita Terkini Indonesia",
@@ -70,6 +70,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" suppressHydrationWarning>
+      <head>
+        <link
+          rel="alternate"
+          type="application/rss+xml"
+          title="Berita.AE RSS Feed"
+          href="/feed.xml"
+        />
+      </head>
       <body
         className={`${inter.variable} font-sans antialiased`}
         suppressHydrationWarning

@@ -86,12 +86,47 @@ export default async function NewsPage({ params }: NewsPageProps) {
     .filter((a) => a.id !== article.id)
     .slice(0, 3);
 
+  // JSON-LD structured data for SEO
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
+    headline: article.title,
+    description: article.excerpt,
+    image: article.image_url,
+    datePublished: article.published_at || article.created_at,
+    dateModified: article.updated_at,
+    author: {
+      "@type": "Person",
+      name: article.author.name,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Berita.AE",
+      logo: {
+        "@type": "ImageObject",
+        url: `${process.env.NEXT_PUBLIC_SITE_URL || ""}/favicon.ico`,
+      },
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `${process.env.NEXT_PUBLIC_SITE_URL || ""}/news/${article.slug}`,
+    },
+    articleSection: article.category.name,
+    wordCount: article.content?.split(/\s+/).length || 0,
+  };
+
   return (
-    <NewsDetailClient
-      article={article}
-      relatedArticles={filteredRelated}
-      categories={categories}
-      engagement={engagement}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <NewsDetailClient
+        article={article}
+        relatedArticles={filteredRelated}
+        categories={categories}
+        engagement={engagement}
+      />
+    </>
   );
 }
