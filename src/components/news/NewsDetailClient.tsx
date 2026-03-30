@@ -12,6 +12,10 @@ import { ArticleActions } from "@/components/news/ArticleActions";
 import { TextToSpeech } from "@/components/news/TextToSpeech";
 import { HighlightQuote } from "@/components/news/HighlightQuote";
 import { useReadingHistory } from "@/components/news/ReadingHistory";
+import { ArticleSummary } from "@/components/news/ArticleSummary";
+import { FontSizeControl } from "@/components/news/FontSizeControl";
+import { KeyboardShortcuts } from "@/components/news/KeyboardShortcuts";
+import { ReadingTimeLeft } from "@/components/news/ReadingTimeLeft";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { PostArticleAd } from "@/components/ads";
 import { ArticleContentWithAd } from "@/components/ads";
@@ -144,6 +148,12 @@ export function NewsDetailClient({
         />
       </div>
 
+      {/* Reading Time Left */}
+      <ReadingTimeLeft content={article.content || ""} />
+
+      {/* Keyboard Shortcuts */}
+      <KeyboardShortcuts />
+
       <article className="container mx-auto px-4 py-6">
         {/* Back Button */}
         <ScrollReveal>
@@ -249,8 +259,20 @@ export function NewsDetailClient({
 
           {/* Text-to-Speech */}
           <ScrollReveal delay={0.05}>
-            <TextToSpeech text={article.content || ""} title={article.title} />
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <TextToSpeech
+                text={article.content || ""}
+                title={article.title}
+              />
+              <FontSizeControl />
+            </div>
           </ScrollReveal>
+
+          {/* AI Summary */}
+          <ArticleSummary
+            content={article.content || ""}
+            title={article.title}
+          />
 
           {/* Featured Image */}
           <ScrollReveal delay={0.1}>
