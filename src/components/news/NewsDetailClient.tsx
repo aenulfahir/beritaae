@@ -257,22 +257,17 @@ export function NewsDetailClient({
             </header>
           </ScrollReveal>
 
-          {/* Text-to-Speech */}
-          <ScrollReveal delay={0.05}>
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <TextToSpeech
-                text={article.content || ""}
-                title={article.title}
-              />
+          {/* Article Tools */}
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <TextToSpeech text={article.content || ""} title={article.title} />
+            <ArticleSummary
+              content={article.content || ""}
+              title={article.title}
+            />
+            <div className="ml-auto">
               <FontSizeControl />
             </div>
-          </ScrollReveal>
-
-          {/* AI Summary */}
-          <ArticleSummary
-            content={article.content || ""}
-            title={article.title}
-          />
+          </div>
 
           {/* Featured Image */}
           <ScrollReveal delay={0.1}>

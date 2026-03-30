@@ -108,19 +108,19 @@ export function ArticleSummary({ content, title }: ArticleSummaryProps) {
   if (wordCount < 100) return null;
 
   return (
-    <div className="mb-6">
+    <div>
       <Button
-        variant="outline"
+        variant="ghost"
         size="sm"
-        className="gap-2 rounded-full border-violet-300 dark:border-violet-700 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/30"
+        className="gap-1.5 rounded-full text-xs text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/30 h-8"
         onClick={handleGenerate}
       >
         <Sparkles className="h-3.5 w-3.5" />
-        {isOpen ? "Sembunyikan Ringkasan" : "Ringkasan AI"}
+        <span className="hidden sm:inline">Ringkasan</span>
         {isOpen ? (
-          <ChevronUp className="h-3.5 w-3.5" />
+          <ChevronUp className="h-3 w-3" />
         ) : (
-          <ChevronDown className="h-3.5 w-3.5" />
+          <ChevronDown className="h-3 w-3" />
         )}
       </Button>
 
@@ -130,9 +130,9 @@ export function ArticleSummary({ content, title }: ArticleSummaryProps) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+            className="overflow-hidden basis-full"
           >
-            <div className="mt-3 p-4 bg-gradient-to-br from-violet-50 to-blue-50 dark:from-violet-950/30 dark:to-blue-950/20 rounded-xl border border-violet-200/50 dark:border-violet-800/30">
+            <div className="mt-2 p-3 bg-violet-50 dark:bg-violet-950/40 rounded-xl border border-violet-200/50 dark:border-violet-800/30 max-h-[40vh] overflow-y-auto">
               {isGenerating ? (
                 <div className="flex items-center gap-2 text-sm text-violet-600 dark:text-violet-400">
                   <Loader2 className="h-4 w-4 animate-spin" />
