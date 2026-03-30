@@ -46,6 +46,25 @@ export async function POST(
     return NextResponse.json({ error: "Content required" }, { status: 400 });
   }
 
+  // Ensure profile exists for this user (foreign key requirement)
+  const { data: existingProfile } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", user.id)
+    .single();
+
+  if (!existingProfile) {
+    // Create profile
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any).from("profiles").insert({
+      id: user.id,
+      email: user.email,
+      full_name:
+        user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
+      role: "member",
+    });
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
     .from("comments")
