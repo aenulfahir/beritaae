@@ -19,12 +19,10 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   // During build/SSR without env vars, return a mock client
-  // This allows static page generation to complete
   if (!supabaseUrl || !supabaseKey) {
-    // Only log once in development
     if (process.env.NODE_ENV === "development") {
       console.warn(
-        "[Supabase Client] Using mock client - env vars not available"
+        "[Supabase Client] Using mock client - env vars not available",
       );
     }
     return createMockBrowserClient();
@@ -38,6 +36,11 @@ export function createClient() {
     },
   });
   return browserClient;
+}
+
+// Reset the singleton - call this on signOut so next createClient() gets fresh session
+export function resetClient() {
+  browserClient = null;
 }
 
 // Mock client for SSR/build-time

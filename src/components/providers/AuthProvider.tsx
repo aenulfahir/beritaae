@@ -10,7 +10,7 @@ import {
   useRef,
 } from "react";
 import { User, Session, AuthError } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, resetClient } from "@/lib/supabase/client";
 import { Profile } from "@/types";
 import { useRouter } from "next/navigation";
 
@@ -21,15 +21,15 @@ interface AuthContextType {
   isLoading: boolean;
   signIn: (
     email: string,
-    password: string
+    password: string,
   ) => Promise<{ error: AuthError | null }>;
   signUp: (
     email: string,
     password: string,
-    fullName: string
+    fullName: string,
   ) => Promise<{ error: AuthError | null }>;
   signInWithOAuth: (
-    provider: "google" | "github"
+    provider: "google" | "github",
   ) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -101,7 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return null;
       }
     },
-    [supabase]
+    [supabase],
   );
 
   const refreshProfile = useCallback(async () => {
@@ -158,6 +158,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const newToken = currentSession?.access_token ?? null;
 
+      // Handle INITIAL_SESSION - this fires first when page loads
+      if (event === "INITIAL_SESSION") {
+        lastSessionTokenRef.current = newToken;
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+
+        if (currentSession?.user) {
+          const profileData = await fetchProfile(currentSession.user.id);
+          if (mounted) setProfile(profileData);
+        }
+        if (mounted) setIsLoading(false);
+        return;
+      }
+
       // For SIGNED_IN event (including OAuth), always process
       if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         lastSessionTokenRef.current = newToken;
@@ -172,17 +186,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setProfile(profileData);
           }
         }
-        setIsLoading(false);
+        if (mounted) setIsLoading(false);
         return;
       }
 
-      // Skip if token hasn't changed (except for sign out)
-      if (newToken === lastSessionTokenRef.current && event !== "SIGNED_OUT") {
+      // Handle SIGNED_OUT
+      if (event === "SIGNED_OUT") {
+        lastSessionTokenRef.current = null;
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        if (mounted) setIsLoading(false);
+        return;
+      }
+
+      // Skip if token hasn't changed
+      if (newToken === lastSessionTokenRef.current) {
         return;
       }
 
       lastSessionTokenRef.current = newToken;
-
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
 
@@ -195,12 +218,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(null);
       }
 
-      setIsLoading(false);
+      if (mounted) setIsLoading(false);
     });
+
+    // Fallback: ensure isLoading becomes false after 5 seconds max
+    const loadingTimeout = setTimeout(() => {
+      if (mounted && isLoading) {
+        setIsLoading(false);
+      }
+    }, 5000);
 
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      clearTimeout(loadingTimeout);
     };
   }, [supabase, fetchProfile]);
 
@@ -212,7 +243,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       return { error };
     },
-    [supabase]
+    [supabase],
   );
 
   const signUp = useCallback(
@@ -229,7 +260,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       return { error };
     },
-    [supabase]
+    [supabase],
   );
 
   const signInWithOAuth = useCallback(
@@ -242,7 +273,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       return { error };
     },
-    [supabase]
+    [supabase],
   );
 
   const signOut = useCallback(async () => {
@@ -251,6 +282,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setProfile(null);
       setSession(null);
+      lastSessionTokenRef.current = null;
+      resetClient(); // Reset singleton so next login gets fresh client
       router.push("/");
       router.refresh();
     } catch (error) {
@@ -280,7 +313,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signInWithOAuth,
       signOut,
       refreshProfile,
-    ]
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
