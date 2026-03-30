@@ -9,6 +9,9 @@ import { ScrollReveal } from "@/components/animations/ScrollReveal";
 import { NewsCard } from "@/components/news/NewsCard";
 import { CommentSection } from "@/components/news/CommentSection";
 import { ArticleActions } from "@/components/news/ArticleActions";
+import { TextToSpeech } from "@/components/news/TextToSpeech";
+import { HighlightQuote } from "@/components/news/HighlightQuote";
+import { useReadingHistory } from "@/components/news/ReadingHistory";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { PostArticleAd } from "@/components/ads";
 import { ArticleContentWithAd } from "@/components/ads";
@@ -72,6 +75,15 @@ export function NewsDetailClient({
     author.avatar && author.avatar.trim() !== ""
       ? author.avatar
       : PLACEHOLDER_AVATAR;
+
+  // Track reading history
+  useReadingHistory({
+    id: article.id,
+    title: article.title,
+    slug: article.slug,
+    image_url: article.image_url,
+    category: category,
+  });
 
   useEffect(() => {
     const handleScroll = () => {
@@ -235,6 +247,11 @@ export function NewsDetailClient({
             </header>
           </ScrollReveal>
 
+          {/* Text-to-Speech */}
+          <ScrollReveal delay={0.05}>
+            <TextToSpeech text={article.content || ""} title={article.title} />
+          </ScrollReveal>
+
           {/* Featured Image */}
           <ScrollReveal delay={0.1}>
             <div
@@ -375,6 +392,9 @@ export function NewsDetailClient({
         isOpen={!!lightboxImage}
         onClose={() => setLightboxImage(null)}
       />
+
+      {/* Highlight & Quote - allows selecting text to share */}
+      <HighlightQuote />
     </>
   );
 }

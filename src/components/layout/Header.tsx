@@ -35,6 +35,7 @@ import {
   Settings,
   UserCircle,
   Command,
+  History,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useState, useEffect, useCallback } from "react";
@@ -206,7 +207,7 @@ export function Header() {
                             profile?.full_name ||
                               user?.user_metadata?.full_name ||
                               user?.email ||
-                              "U"
+                              "U",
                           )}&background=random`
                         }
                       />
@@ -239,6 +240,12 @@ export function Header() {
                     <Link href="/saved" className="cursor-pointer">
                       <Bookmark className="mr-2 h-4 w-4" />
                       Artikel Tersimpan
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/history" className="cursor-pointer">
+                      <History className="mr-2 h-4 w-4" />
+                      Riwayat Baca
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
@@ -312,7 +319,7 @@ export function Header() {
                       asChild
                       className={cn(
                         navigationMenuTriggerStyle(),
-                        "h-10 px-3 text-sm"
+                        "h-10 px-3 text-sm",
                       )}
                     >
                       <Link href="/">Beranda</Link>
@@ -358,7 +365,7 @@ export function Header() {
                         asChild
                         className={cn(
                           navigationMenuTriggerStyle(),
-                          "h-10 px-3 text-sm"
+                          "h-10 px-3 text-sm",
                         )}
                       >
                         <Link href={`/category/${cat.slug}`}>{cat.name}</Link>
@@ -466,7 +473,7 @@ export function Header() {
                               profile?.full_name ||
                                 user?.user_metadata?.full_name ||
                                 user?.email ||
-                                "U"
+                                "U",
                             )}&background=random`
                           }
                         />
