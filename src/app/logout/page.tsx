@@ -1,79 +1,82 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createClient, resetClient } from "@/lib/supabase/client";
+import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
-export default function LogoutPage() {
-  const [status, setStatus] = useState("Sedang logout...");
-
-  useEffect(() => {
-    async function doLogout() {
-      try {
-        // 1. Supabase client signout
-        const supabase = createClient();
-        await supabase.auth.signOut({ scope: "local" }).catch(() => {});
-
-        // 2. Server-side cookie cleanup
-        await fetch("/api/auth/signout", { method: "POST" }).catch(() => {});
-
-        // 3. Clear ALL localStorage
-        if (typeof window !== "undefined") {
-          const keysToRemove: string[] = [];
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (
-              key &&
-              (key.includes("supabase") ||
-                key.includes("sb-") ||
-                key.includes("auth"))
-            ) {
-              keysToRemove.push(key);
-            }
-          }
-          keysToRemove.forEach((k) => localStorage.removeItem(k));
-
-          // Clear sessionStorage
-          const ssKeys: string[] = [];
-          for (let i = 0; i < sessionStorage.length; i++) {
-            const key = sessionStorage.key(i);
-            if (
-              key &&
-              (key.includes("supabase") ||
-                key.includes("sb-") ||
-                key.includes("auth"))
-            ) {
-              ssKeys.push(key);
-            }
-          }
-          ssKeys.forEach((k) => sessionStorage.removeItem(k));
-        }
-
-        // 4. Reset singleton client
-        resetClient();
-
-        setStatus("Berhasil logout! Mengalihkan...");
-
-        // 5. Redirect with full reload
-        setTimeout(() => {
-          window.location.replace("/");
-        }, 500);
-      } catch (err) {
-        console.error("Logout error:", err);
-        setStatus("Logout gagal. Mengalihkan...");
-        setTimeout(() => {
-          window.location.replace("/");
-        }, 1000);
-      }
+function clearAllAuthData() {
+  // Clear localStorage
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k) keys.push(k);
     }
+    // Remove ALL supabase/auth related keys
+    keys.forEach((k) => {
+      if (k.includes("supabase") || k.includes("sb-") || k.includes("auth")) {
+        localStorage.removeItem(k);
+      }
+    });
+  } catch {}
 
-    doLogout();
+  // Clear sessionStorage
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const k = sessionStorage.key(i);
+      if (k) keys.push(k);
+    }
+    keys.forEach((k) => {
+      if (k.includes("supabase") || k.includes("sb-") || k.includes("auth")) {
+        sessionStorage.removeItem(k);
+      }
+    });
+  } catch {}
+
+  // Clear cookies client-side
+  try {
+    document.cookie.split(";").forEach((c) => {
+      const name = c.split("=")[0].trim();
+      if (
+        name.includes("supabase") ||
+        name.includes("sb-") ||
+        name.includes("auth")
+      ) {
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
+      }
+    });
+  } catch {}
+}
+
+export default function LogoutPage() {
+  useEffect(() => {
+    // Immediately clear all auth data
+    clearAllAuthData();
+
+    // Try server-side cleanup with a short timeout, don't wait
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2000);
+
+    fetch("/api/auth/signout", {
+      method: "POST",
+      signal: controller.signal,
+    })
+      .catch(() => {})
+      .finally(() => {
+        clearTimeout(timeout);
+      });
+
+    // Redirect after a brief moment regardless
+    setTimeout(() => {
+      window.location.replace("/");
+    }, 1000);
   }, []);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4">
       <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      <p className="text-muted-foreground">{status}</p>
+      <p className="text-muted-foreground">Sedang logout...</p>
     </div>
   );
 }
