@@ -96,10 +96,8 @@ export function AdminHeader() {
     }
   };
 
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
+  const handleLogout = () => {
+    window.location.href = "/logout";
   };
 
   const formatDate = () => {

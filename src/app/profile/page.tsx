@@ -203,12 +203,12 @@ export default function ProfilePage() {
       const { url, error: uploadError } = await uploadAvatar(
         user.id,
         compressedBlob,
-        selectedFile.name
+        selectedFile.name,
       );
 
       if (uploadError || !url) {
         setError(
-          "Gagal mengupload foto. Pastikan storage bucket 'avatars' sudah dibuat."
+          "Gagal mengupload foto. Pastikan storage bucket 'avatars' sudah dibuat.",
         );
         setIsUploadingAvatar(false);
         return;
@@ -266,7 +266,7 @@ export default function ProfilePage() {
     try {
       // Filter out empty social links
       const filteredSocialLinks = Object.fromEntries(
-        Object.entries(socialLinks).filter(([, value]) => value.trim() !== "")
+        Object.entries(socialLinks).filter(([, value]) => value.trim() !== ""),
       );
 
       const { error: updateError } = await updateProfile(user.id, {
@@ -290,9 +290,8 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    router.push("/");
+  const handleSignOut = () => {
+    window.location.href = "/logout";
   };
 
   if (authLoading) {
@@ -331,7 +330,7 @@ export default function ProfilePage() {
   };
 
   const activeSocialLinks = Object.entries(profile.social_links || {}).filter(
-    ([, value]) => value && value.trim() !== ""
+    ([, value]) => value && value.trim() !== "",
   );
 
   return (
@@ -383,7 +382,7 @@ export default function ProfilePage() {
                     <Badge
                       variant="outline"
                       className={`${getRoleBadgeColor(
-                        profile.role
+                        profile.role,
                       )} capitalize`}
                     >
                       <Shield className="h-3 w-3 mr-1" />
@@ -401,7 +400,7 @@ export default function ProfilePage() {
                       <div className="flex flex-wrap justify-center gap-2 mt-4">
                         {activeSocialLinks.map(([key, value]) => {
                           const platform = SOCIAL_PLATFORMS.find(
-                            (p) => p.key === key
+                            (p) => p.key === key,
                           );
                           const Icon = platform?.icon || LinkIcon;
                           return (
@@ -486,7 +485,7 @@ export default function ProfilePage() {
                           day: "numeric",
                           month: "short",
                           year: "numeric",
-                        }
+                        },
                       )}
                     </span>
                   </div>
@@ -525,7 +524,7 @@ export default function ProfilePage() {
                                 (1 -
                                   compressionInfo.compressed /
                                     compressionInfo.original) *
-                                  100
+                                  100,
                               )}
                               %)
                             </span>
@@ -681,7 +680,7 @@ export default function ProfilePage() {
                                 onChange={(e) =>
                                   handleSocialLinkChange(
                                     platform.key,
-                                    e.target.value
+                                    e.target.value,
                                   )
                                 }
                                 disabled={isLoading}

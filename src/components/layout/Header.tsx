@@ -86,9 +86,8 @@ export function Header() {
       .slice(0, 2);
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    setMobileMenuOpen(false);
+  const handleSignOut = () => {
+    window.location.href = "/logout";
   };
 
   return (
