@@ -398,3 +398,17 @@ html {
 .page-transition {
   animation: page-fade-in 0.3s ease-out;
 }
+
+/* Print styles */
+@media print {
+  header, footer, nav, .sticky, .fixed,
+  [data-radix-popper-content-wrapper],
+  button:not(.print-visible) {
+    display: none !important;
+  }
+  body { background: white !important; color: black !important; }
+  .prose { max-width: 100% !important; font-size: 12pt !important; }
+  .prose img { max-width: 100% !important; page-break-inside: avoid; }
+  a { color: black !important; text-decoration: underline; }
+  @page { margin: 2cm; }
+}

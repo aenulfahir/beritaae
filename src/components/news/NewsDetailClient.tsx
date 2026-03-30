@@ -16,6 +16,8 @@ import { ArticleSummary } from "@/components/news/ArticleSummary";
 import { FontSizeControl } from "@/components/news/FontSizeControl";
 import { KeyboardShortcuts } from "@/components/news/KeyboardShortcuts";
 import { ReadingTimeLeft } from "@/components/news/ReadingTimeLeft";
+import { TableOfContents } from "@/components/news/TableOfContents";
+import { PrintButton } from "@/components/news/PrintButton";
 import { ImageLightbox } from "@/components/ui/ImageLightbox";
 import { PostArticleAd } from "@/components/ads";
 import { ArticleContentWithAd } from "@/components/ads";
@@ -264,10 +266,14 @@ export function NewsDetailClient({
               content={article.content || ""}
               title={article.title}
             />
+            <PrintButton />
             <div className="ml-auto">
               <FontSizeControl />
             </div>
           </div>
+
+          {/* Table of Contents */}
+          <TableOfContents content={article.content || ""} />
 
           {/* Featured Image */}
           <ScrollReveal delay={0.1}>
