@@ -152,41 +152,19 @@ export async function createComment(commentData: {
 }): Promise<Comment | null> {
   const supabase = getSupabase();
 
-  // Verify user is authenticated
+  // Verify user is authenticated - use getSession (faster, uses cached token)
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    console.error("Error creating comment: User not authenticated");
-    return null;
-  }
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  // Ensure user_id matches authenticated user
-  if (user.id !== commentData.user_id) {
-    console.error("Error creating comment: User ID mismatch");
-    return null;
-  }
-
-  // Check if profile exists, create if not
-  const { data: existingProfile } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("id", user.id)
-    .single();
-
-  if (!existingProfile) {
-    // Create profile for user
-    const { error: profileError } = await supabase.from("profiles").insert({
-      id: user.id,
-      email: user.email,
-      full_name:
-        user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
-      role: "member",
-    });
-
-    if (profileError) {
-      console.error("Error creating profile:", profileError.message);
-      // Continue anyway - trigger might have created it
+  if (!session?.user) {
+    // Fallback to getUser if session not available
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      console.error("Error creating comment: User not authenticated");
+      return null;
     }
   }
 
@@ -194,8 +172,11 @@ export async function createComment(commentData: {
   const { data: comment, error } = await (supabase as any)
     .from("comments")
     .insert({
-      ...commentData,
-      is_approved: true, // Auto-approve for immediate visibility
+      article_id: commentData.article_id,
+      user_id: commentData.user_id,
+      content: commentData.content,
+      parent_id: commentData.parent_id || null,
+      is_approved: true,
     })
     .select(
       `

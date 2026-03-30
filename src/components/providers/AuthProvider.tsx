@@ -278,18 +278,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     try {
-      await supabase.auth.signOut();
+      // Sign out from Supabase first
+      await supabase.auth.signOut({ scope: "local" });
+    } catch (error) {
+      console.error("Error signing out:", error);
+    } finally {
+      // Always clear state regardless of signOut success
       setUser(null);
       setProfile(null);
       setSession(null);
       lastSessionTokenRef.current = null;
-      resetClient(); // Reset singleton so next login gets fresh client
-      router.push("/");
-      router.refresh();
-    } catch (error) {
-      console.error("Error signing out:", error);
+      resetClient();
+      // Use window.location for a full page reload to clear all state
+      window.location.href = "/";
     }
-  }, [supabase, router]);
+  }, [supabase]);
 
   const value = useMemo(
     () => ({

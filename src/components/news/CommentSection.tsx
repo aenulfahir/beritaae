@@ -473,10 +473,15 @@ export function CommentSection({ articleId }: CommentSectionProps) {
         setComments((prev) => [...prev, newComment]);
         setCommentText("");
       } else {
-        console.error("Failed to create comment - check authentication");
+        toast.error("Gagal mengirim komentar", {
+          description: "Coba refresh halaman dan kirim ulang.",
+        });
       }
     } catch (error) {
       console.error("Error submitting comment:", error);
+      toast.error("Terjadi kesalahan", {
+        description: "Coba refresh halaman dan kirim ulang.",
+      });
     } finally {
       setIsSubmitting(false);
     }
