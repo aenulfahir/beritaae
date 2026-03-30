@@ -9,7 +9,7 @@ export async function getProfile(
   userId: string,
   retryCount = 0,
 ): Promise<Profile | null> {
-  const maxRetries = 3;
+  const maxRetries = 1;
   const supabase = getSupabase();
 
   try {
@@ -20,16 +20,8 @@ export async function getProfile(
       .single();
 
     if (error) {
-      // Retry on network/connection errors
-      if (
-        retryCount < maxRetries &&
-        (error.message?.includes("network") ||
-          error.message?.includes("fetch") ||
-          error.message?.includes("Failed"))
-      ) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, 500 * (retryCount + 1)),
-        );
+      if (retryCount < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
         return getProfile(userId, retryCount + 1);
       }
       console.error("Error fetching profile:", error);
@@ -38,11 +30,8 @@ export async function getProfile(
 
     return data;
   } catch (err) {
-    // Retry on unexpected errors
     if (retryCount < maxRetries) {
-      await new Promise((resolve) =>
-        setTimeout(resolve, 500 * (retryCount + 1)),
-      );
+      await new Promise((resolve) => setTimeout(resolve, 500));
       return getProfile(userId, retryCount + 1);
     }
     console.error("Exception fetching profile:", err);

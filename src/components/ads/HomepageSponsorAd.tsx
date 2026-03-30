@@ -26,28 +26,30 @@ export function HomepageSponsorAd({ className }: HomepageSponsorAdProps) {
 
   // Fetch ad on mount with retry
   useEffect(() => {
-    let retryCount = 0;
-    const maxRetries = 3;
+    let mounted = true;
 
     async function fetchAd() {
-      setLoading(true);
       try {
         const activeAd = await getActiveAdForSlot("homepage_hero");
-        setAd(activeAd);
-        retryCount = 0;
+        if (mounted) setAd(activeAd);
       } catch (error) {
-        console.error("Error fetching ad:", error);
-        // Retry on failure
-        if (retryCount < maxRetries) {
-          retryCount++;
-          setTimeout(fetchAd, 1000 * retryCount);
-          return;
-        }
+        console.error("Error fetching homepage ad:", error);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
+
     fetchAd();
+
+    // Fallback: stop loading after 5 seconds
+    const timeout = setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, 5000);
+
+    return () => {
+      mounted = false;
+      clearTimeout(timeout);
+    };
   }, []);
 
   // Track impression when ad is displayed

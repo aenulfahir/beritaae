@@ -385,35 +385,35 @@ export function CommentSection({ articleId }: CommentSectionProps) {
   useEffect(() => {
     let isMounted = true;
     let retryCount = 0;
-    const maxRetries = 3;
+    const maxRetries = 2;
 
     const fetchComments = async () => {
-      setIsLoading(true);
       try {
         const data = await getArticleComments(articleId);
         if (isMounted) {
           setComments(data);
-          retryCount = 0;
         }
       } catch (error) {
         console.error("Error fetching comments:", error);
-        if (isMounted) {
-          // Retry on failure
-          if (retryCount < maxRetries) {
-            retryCount++;
-            setTimeout(fetchComments, 1000 * retryCount);
-            return;
-          }
-          setComments([]);
+        if (isMounted && retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(fetchComments, 1000 * retryCount);
+          return;
         }
+        if (isMounted) setComments([]);
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       }
     };
 
     fetchComments();
+
+    // Fallback timeout - stop loading after 8 seconds no matter what
+    const fallbackTimeout = setTimeout(() => {
+      if (isMounted && isLoading) {
+        setIsLoading(false);
+      }
+    }, 8000);
 
     // Subscribe to real-time updates
     const channel = subscribeToComments(articleId, (payload) => {
@@ -444,6 +444,7 @@ export function CommentSection({ articleId }: CommentSectionProps) {
     return () => {
       isMounted = false;
       channel.unsubscribe();
+      clearTimeout(fallbackTimeout);
     };
   }, [articleId]);
 

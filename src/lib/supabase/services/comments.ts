@@ -87,14 +87,10 @@ export async function getArticleComments(
   articleId: string,
   retryCount = 0,
 ): Promise<Comment[]> {
-  const maxRetries = 3;
+  const maxRetries = 2;
 
   try {
     const supabase = getSupabase();
-
-    // Add timeout to prevent infinite loading
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     const { data, error } = await supabase
       .from("comments")
@@ -107,25 +103,16 @@ export async function getArticleComments(
       .eq("article_id", articleId)
       .order("created_at", { ascending: true });
 
-    clearTimeout(timeoutId);
-
     if (error) {
-      // Silently handle error if table doesn't exist yet or RLS blocks access
-      if (error.code === "42P01" || error.message?.includes("does not exist")) {
+      if (error.code === "42P01" || error.message?.includes("does not exist"))
         return [];
-      }
-      // Silently ignore RLS/permission errors - they're expected for unauthenticated users
-      if (error.code === "42501" || error.code === "PGRST116") {
-        return [];
-      }
+      if (error.code === "42501" || error.code === "PGRST116") return [];
 
-      // Retry on network/connection errors
       if (
         retryCount < maxRetries &&
         (error.message?.includes("network") ||
           error.message?.includes("fetch") ||
-          error.message?.includes("Failed") ||
-          error.message?.includes("timeout"))
+          error.message?.includes("Failed"))
       ) {
         await new Promise((resolve) =>
           setTimeout(resolve, 500 * (retryCount + 1)),
@@ -133,7 +120,6 @@ export async function getArticleComments(
         return getArticleComments(articleId, retryCount + 1);
       }
 
-      // Only log meaningful errors (not empty objects from RLS)
       if (isRealError(error)) {
         console.error("Error fetching comments:", error.message || error);
       }
@@ -145,14 +131,12 @@ export async function getArticleComments(
     );
     return buildCommentTree(comments);
   } catch (err) {
-    // Retry on unexpected errors
     if (retryCount < maxRetries) {
       await new Promise((resolve) =>
         setTimeout(resolve, 500 * (retryCount + 1)),
       );
       return getArticleComments(articleId, retryCount + 1);
     }
-    // Handle any unexpected errors - only log meaningful ones
     if (isRealError(err)) {
       console.error("Unexpected error fetching comments:", err);
     }

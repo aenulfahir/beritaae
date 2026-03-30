@@ -25,28 +25,29 @@ export function PostArticleAd({ className }: PostArticleAdProps) {
 
   // Fetch ad on mount with retry
   useEffect(() => {
-    let retryCount = 0;
-    const maxRetries = 3;
+    let mounted = true;
 
     async function fetchAd() {
-      setLoading(true);
       try {
         const activeAd = await getActiveAdForSlot("post_article");
-        setAd(activeAd);
-        retryCount = 0;
+        if (mounted) setAd(activeAd);
       } catch (error) {
         console.error("Error fetching post article ad:", error);
-        // Retry on failure
-        if (retryCount < maxRetries) {
-          retryCount++;
-          setTimeout(fetchAd, 1000 * retryCount);
-          return;
-        }
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
+
     fetchAd();
+
+    const timeout = setTimeout(() => {
+      if (mounted) setLoading(false);
+    }, 5000);
+
+    return () => {
+      mounted = false;
+      clearTimeout(timeout);
+    };
   }, []);
 
   // Track impression when ad is displayed

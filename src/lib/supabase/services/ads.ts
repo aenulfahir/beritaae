@@ -33,7 +33,7 @@ export async function getActiveAdForSlot(
   slotType: AdSlotType,
   retryCount = 0,
 ): Promise<Ad | null> {
-  const maxRetries = 3;
+  const maxRetries = 1;
   const supabase = createClient();
   const now = new Date().toISOString();
 
@@ -50,31 +50,18 @@ export async function getActiveAdForSlot(
       .maybeSingle();
 
     if (error) {
-      console.error("Error fetching ad:", error);
-
-      // Retry on network errors
-      if (
-        retryCount < maxRetries &&
-        (error.message?.includes("network") ||
-          error.message?.includes("fetch") ||
-          error.message?.includes("Failed"))
-      ) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, 500 * (retryCount + 1)),
-        );
+      if (retryCount < maxRetries) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
         return getActiveAdForSlot(slotType, retryCount + 1);
       }
-
+      console.error("Error fetching ad:", error);
       return null;
     }
 
     return data as Ad | null;
   } catch (err) {
-    // Retry on unexpected errors
     if (retryCount < maxRetries) {
-      await new Promise((resolve) =>
-        setTimeout(resolve, 500 * (retryCount + 1)),
-      );
+      await new Promise((resolve) => setTimeout(resolve, 500));
       return getActiveAdForSlot(slotType, retryCount + 1);
     }
     console.error("Exception fetching ad:", err);
