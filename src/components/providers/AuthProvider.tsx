@@ -278,18 +278,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     try {
-      // Sign out from Supabase first
-      await supabase.auth.signOut({ scope: "local" });
+      await supabase.auth.signOut({ scope: "local" }).catch(() => {});
+      await fetch("/api/auth/signout", { method: "POST" }).catch(() => {});
+      if (typeof window !== "undefined") {
+        const lsKeys: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (
+            k &&
+            (k.includes("supabase") ||
+              k.includes("sb-") ||
+              k.includes("auth-token"))
+          )
+            lsKeys.push(k);
+        }
+        lsKeys.forEach((k) => localStorage.removeItem(k));
+        const ssKeys: string[] = [];
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const k = sessionStorage.key(i);
+          if (
+            k &&
+            (k.includes("supabase") ||
+              k.includes("sb-") ||
+              k.includes("auth-token"))
+          )
+            ssKeys.push(k);
+        }
+        ssKeys.forEach((k) => sessionStorage.removeItem(k));
+      }
     } catch (error) {
       console.error("Error signing out:", error);
     } finally {
-      // Always clear state regardless of signOut success
       setUser(null);
       setProfile(null);
       setSession(null);
       lastSessionTokenRef.current = null;
       resetClient();
-      // Use window.location for a full page reload to clear all state
       window.location.href = "/";
     }
   }, [supabase]);
